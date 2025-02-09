@@ -21,7 +21,7 @@ export default function ArtistsSectionComponent({ title, blurb, image }: { title
             </div>
             <div className="relative w-full lg:w-[67%] grid place-items-center">
 
-                <div className="image-section min-h-[40dvh] lg:min-h-[56dvh]">
+                <div className="image-section max-w-full min-h-[40dvh] lg:min-h-[56dvh]">
                     <div className="min-w-[9dvh] lg:min-w-[13dvh]">&nbsp;</div>
                     {image?.map((image: string, k: number) => (
                         <Image key={k} src={image} alt="image" width={600} height={600} className="image m-5 h-[32dvh] lg:h-[48dvh] w-auto rounded" />
