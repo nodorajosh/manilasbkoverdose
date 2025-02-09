@@ -7,10 +7,10 @@ import "./globals.css";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
-const brexon = localFont({
-  src: "../assets/fonts/brexon.regular.ttf",
-  variable: "--font-header"
-})
+// const brexon = localFont({
+//   src: "../assets/fonts/brexon.regular.ttf",
+//   variable: "--font-header"
+// })
 
 const montserrat = Montserrat({
   variable: "--font-body",

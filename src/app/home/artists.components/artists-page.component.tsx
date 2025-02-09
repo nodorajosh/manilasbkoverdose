@@ -5,7 +5,20 @@ import Link from "next/link";
 
 import ArtistsSectionComponent from "./artist-section.component";
 
-export default function ArtistsPageComponent({ imageObject }: { imageObject: any }) {
+interface ImageObject {
+    [key: string]: {
+        "Main Artists": string[];
+        "Additional International Artists": string[];
+        "Local Artists": string[];
+        "Performers": string[];
+        "DJs": string[];
+        "Ambassadors": string[];
+        "Hosts": string[];
+        "Event Organizers": string[];
+    };
+}
+
+export default function ArtistsPageComponent({ imageObject }: { imageObject: ImageObject }) {
 
     const [year, setYear] = useState(Object.keys(imageObject).reverse()[0])
 

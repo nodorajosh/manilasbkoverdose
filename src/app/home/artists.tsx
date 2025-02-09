@@ -1,11 +1,8 @@
-import Link from "next/link";
 
 import fs from 'fs'
 import path from 'path'
-import Image from "next/image";
-import ArtistsPageComponent from "./artists.components/artists-page.component";
 
-const imageSize = 450
+import ArtistsPageComponent from "./artists.components/artists-page.component";
 
 const dir = path.resolve('./public/images/artists');
 let imageObject: any = {}
