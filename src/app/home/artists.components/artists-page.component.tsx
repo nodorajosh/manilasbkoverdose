@@ -113,7 +113,7 @@ export default function ArtistsPageComponent({ imageObject }: {
 
             </div>
 
-            <div className="sticky bottom-10 text-center font-header flex flex-wrap content-end justify-center">
+            <div className="sticky bottom-10 text-center font-header flex flex-wrap content-end justify-center z-8">
                 <Link href="https://ticket.manilasbkoverdose.com/" className="px-5 cta rounded">
                     <span className="h3 text-[1.2rem]">Join Us Now</span>
                 </Link>
