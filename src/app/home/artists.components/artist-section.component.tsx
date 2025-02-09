@@ -5,7 +5,7 @@ import Image from "next/image";
 
 // console.log(filenames)
 
-export default function ArtistsSectionComponent({ title, blurb, image }: { title: string, blurb: string, image: Array<string> }) {
+export default function ArtistsSectionComponent({ title, blurb, image }: { title: string, blurb: string, image: string[] }) {
 
     return (
         <div className="relative flex flex-row flex-wrap">

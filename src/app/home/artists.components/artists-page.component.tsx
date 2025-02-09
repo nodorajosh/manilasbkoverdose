@@ -5,20 +5,13 @@ import Link from "next/link";
 
 import ArtistsSectionComponent from "./artist-section.component";
 
-interface ImageObject {
-    [key: string]: {
-        "Main Artists": string[];
-        "Additional International Artists": string[];
-        "Local Artists": string[];
-        "Performers": string[];
-        "DJs": string[];
-        "Ambassadors": string[];
-        "Hosts": string[];
-        "Event Organizers": string[];
-    };
-}
-
-export default function ArtistsPageComponent({ imageObject }: { imageObject: ImageObject }) {
+export default function ArtistsPageComponent({ imageObject }: {
+    imageObject: {
+        [key: string]: {
+            [key: string]: undefined | string | string[];
+        };
+    }
+}) {
 
     const [year, setYear] = useState(Object.keys(imageObject).reverse()[0])
 
@@ -66,56 +59,56 @@ export default function ArtistsPageComponent({ imageObject }: { imageObject: Ima
                 <ArtistsSectionComponent
                     title={"Main Artists"}
                     blurb={"World-renowned talents bringing electrifying performances and unmatched expertise to the stage."}
-                    image={imageObject[year]["Main Artists"]}
+                    image={imageObject[year]["Main Artists"] as string[] || []}
                 />
 
                 {/* Additional International Artists */}
                 <ArtistsSectionComponent
                     title={"Additional International Artists"}
                     blurb={"Global sensations adding flair and diversity to the festival's vibrant lineup."}
-                    image={imageObject[year]["Additional International Artists"]}
+                    image={imageObject[year]["Additional International Artists"] as string[] || []}
                 />
 
                 {/* Local Artists */}
                 <ArtistsSectionComponent
                     title={"Local Artists"}
                     blurb={"Homegrown stars showcasing the heart and soul of the Filipino dance community."}
-                    image={imageObject[year]["Local Artists"]}
+                    image={imageObject[year]["Local Artists"] as string[] || []}
                 />
 
                 {/* Performers */}
                 <ArtistsSectionComponent
                     title={"Performers"}
                     blurb={"Dynamic acts guaranteed to captivate and inspire every step of the way."}
-                    image={imageObject[year]["Performers"]}
+                    image={imageObject[year]["Performers"] as string[] || []}
                 />
 
                 {/* DJs */}
                 <ArtistsSectionComponent
                     title={"DJs"}
                     blurb={"Masterminds behind the beats, setting the perfect tempo for unforgettable nights."}
-                    image={imageObject[year]["DJs"]}
+                    image={imageObject[year]["DJs"] as string[] || []}
                 />
 
                 {/* Ambassadors */}
                 <ArtistsSectionComponent
                     title={"Ambassadors"}
                     blurb={"Passionate advocates connecting cultures and championing the spirit of dance."}
-                    image={imageObject[year]["Ambassadors"]}
+                    image={imageObject[year]["Ambassadors"] as string[] || []}
                 />
 
                 {/* Hosts */}
                 <ArtistsSectionComponent
                     title={"Hosts"}
                     blurb={"Charismatic personalities guiding you through an unforgettable journey of rhythm and energy."}
-                    image={imageObject[year]["Hosts"]}
+                    image={imageObject[year]["Hosts"] as string[] || []}
                 />
 
                 {/* Event Organizers */}
                 <ArtistsSectionComponent
                     title={"Event Organizers"}
                     blurb={"The visionary team orchestrating a seamless and spectacular celebration of dance."}
-                    image={imageObject[year]["Event Organizers"]}
+                    image={imageObject[year]["Event Organizers"] as string[] || []}
                 />
 
             </div>
