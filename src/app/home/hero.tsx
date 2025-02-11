@@ -20,7 +20,7 @@ export default function Hero() {
             className="h-dvh bg-[#0d0d0d] relative"
         >
             <div
-                className="p-5 h-full w-full text-white absolute grid place-items-center"
+                className="p-6 h-full w-full text-white absolute grid place-items-center"
                 style={{ ...styles, backgroundImage: `url(${HeroBG.src})` }}
             >
                 <div className="text-center font-header sm:h-[10rem] md:h-[12rem] xl:h-[25rem]">
@@ -33,15 +33,15 @@ export default function Hero() {
                 style={{ ...styles, backgroundImage: `url(${HeroOverlay.src})` }}
             >
                 <div className="text-center font-header h-[20rem] flex flex-wrap content-end justify-center">
-                    <Link href="https://ticket.manilasbkoverdose.com/" className="px-5 cta rounded">
+                    <Link href="https://ticket.manilasbkoverdose.com/" className="px-6 cta rounded">
                         <span className="h3 text-[1.2rem]">Get Your Tickets Now</span>
                     </Link>
                 </div>
             </div>
-            {/* <p className="absolute inset-x-0 bottom-5 text-white text-center">
+            {/* <p className="absolute inset-x-0 bottom-6 text-white text-center">
                 Scroll Down
             </p> */}
-            <div className="absolute inset-x-0 bottom-5 flex flex-wrap content-start justify-center">
+            <div className="absolute inset-x-0 bottom-6 flex flex-wrap content-start justify-center">
                 <div className="scrolldown">
                     <div className="chevrons">
                         <div className="chevrondown"></div>

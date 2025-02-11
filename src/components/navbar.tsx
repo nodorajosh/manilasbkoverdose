@@ -16,7 +16,7 @@ export default function Navbar() {
     ]
 
     return (
-        <nav className="w-dvw p-5 flex flex-row flex-wrap justify-between fixed z-10">
+        <nav className="w-dvw p-6 flex flex-row flex-wrap justify-between fixed z-12">
             <span className="flex flex-wrap justify-start content-center">
                 <Link
                     href="#"

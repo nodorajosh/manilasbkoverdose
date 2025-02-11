@@ -282,13 +282,14 @@ h6,
 
 .select {
   position: absolute;
-  top: 0;
+  top: calc(var(--spacing) * 5);
   right: calc(var(--spacing) * 5);
   width: fit-content;
   cursor: pointer;
   transition: 300ms;
   color: white;
   overflow: hidden;
+  z-index: 6;
 }
 
 .arrow {
@@ -298,7 +299,6 @@ h6,
   transform: rotate(-90deg);
   width: 25px;
   fill: white;
-  z-index: 5;
   transition: 300ms;
 }
 
@@ -307,6 +307,9 @@ h6,
   top: -100px;
   opacity: 0;
   transition: 300ms;
+  background: black;
+  padding: calc(var(--spacing) * 2);
+  border-radius: var(--radius)
 }
 
 .select:hover>.options {
