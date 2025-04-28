@@ -19,6 +19,8 @@ export default function Hero() {
             id="hero"
             className="h-dvh bg-[#0d0d0d] relative"
         >
+            <h1 className="absolute top-0 left-0 opacity-0">Ignite the Night</h1>
+            <h3 className="absolute top-0 left-0 opacity-0">with Afro-Latin Rhythms in Manila</h3>
             <div
                 className="p-6 h-full w-full text-white absolute grid place-items-center"
                 style={{ ...styles, backgroundImage: `url(${HeroBG.src})` }}
