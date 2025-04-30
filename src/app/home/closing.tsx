@@ -13,7 +13,7 @@ export default function Closing() {
                 This isn&apos;t just another dance festival—it&apos;s a movement, a celebration, a memory waiting to happen. When the last beat drops, and the lights dim, you&apos;ll leave with more than just techniques. You&apos;ll carry the connections, the confidence, and the stories you created. The dance floor is calling. Are you ready to answer?
             </p>
             <div className="text-center font-header flex flex-wrap content-end justify-center">
-                <Link href="https://ticket.manilasbkoverdose.com/" className="px-6 cta rounded">
+                <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded">
                     <span className="h3 text-[1.2rem]">Join The Festival Now</span>
                 </Link>
             </div>

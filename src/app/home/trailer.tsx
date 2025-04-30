@@ -27,7 +27,7 @@ export default function Trailer() {
                         for you this year!
                     </p>
                     <div className="text-center font-header flex flex-wrap content-end justify-center">
-                        <Link href="https://ticket.manilasbkoverdose.com/" className="px-6 cta rounded">
+                        <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded">
                             <span className="h3 text-[1.2rem]">Join the Celebration</span>
                         </Link>
                     </div>

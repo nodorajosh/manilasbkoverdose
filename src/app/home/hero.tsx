@@ -35,7 +35,7 @@ export default function Hero() {
                 style={{ ...styles, backgroundImage: `url(${HeroOverlay.src})` }}
             >
                 <div className="text-center font-header h-[20rem] flex flex-wrap content-end justify-center">
-                    <Link href="https://ticket.manilasbkoverdose.com/" className="px-6 cta rounded">
+                    <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded">
                         <span className="h3 text-[1.2rem]">Get Your Tickets Now</span>
                     </Link>
                 </div>

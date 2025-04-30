@@ -21,7 +21,7 @@ export default function ArtistsPageComponent({ imageObject }: {
             className="py-12 relative grid place-items-center text-white bg-(--color-neutral-dark)"
         >
             <div className="select">
-                <div className="selected flex flex-row flex-wrap flex flex-wrap items-center justify-center">
+                <div className="selected flex flex-row flex-wrap items-center justify-center">
                     <span>
                         {year}
                     </span>
@@ -114,7 +114,7 @@ export default function ArtistsPageComponent({ imageObject }: {
             </div>
 
             <div className="sticky bottom-12 text-center font-header flex flex-wrap content-end justify-center z-8">
-                <Link href="https://ticket.manilasbkoverdose.com/" className="px-6 cta rounded">
+                <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded">
                     <span className="h3 text-[1.2rem]">Join Us Now</span>
                 </Link>
             </div>
