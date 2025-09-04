@@ -7,11 +7,11 @@
 // import HeroText from "../../assets/images/manilasbk_hero_text.svg"
 // import HeroOverlay from "../../assets/images/manilasbk_hero_overlay.png"
 
-const styles = {
-    backgroundRepeat: "no-repeat",
-    backgroundPosition: "center",
-    backgroundSize: "cover",
-}
+// const styles = {
+//     backgroundRepeat: "no-repeat",
+//     backgroundPosition: "center",
+//     backgroundSize: "cover",
+// }
 
 export default function Hero() {
     return (
