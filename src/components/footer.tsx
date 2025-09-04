@@ -32,7 +32,7 @@ export default function Footer() {
     return (
         <nav className="w-full p-6 block md:flex justify-between content-center bg-black text-white font-body font-light">
             <Link href="/" className="grid place-items-center">
-                <Image src="/images/logo_manilasbk.png" alt="Manila SBK Overdose Logo" width={150} height={150} className="w-[65px] sm:w-[95px] md:w-[150px] h-auto" />
+                <Image src="/images/logo_manilasbkz.png" alt="Manila SBK Overdose Logo" width={150} height={150} className="w-[65px] sm:w-[95px] md:w-[150px] h-auto" />
             </Link>
             <p className="p-6 grid md:w-3/12 place-items-center text-center">
                 Where Passion Meets Rhythm, and the World Dances as One.

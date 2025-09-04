@@ -19,7 +19,18 @@ export default function Hero() {
             id="hero"
             className="h-dvh bg-[#0d0d0d] relative"
         >
-            <h1 className="absolute top-0 left-0 opacity-0">Ignite the Night</h1>
+            <div
+                className="h-full w-full aspect-video grid place-items-center">
+                <video
+                    className="w-full md:h-full object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                >
+                    <source src="https://res.cloudinary.com/dptolxtcn/video/upload/v1757019545/SBKZ_rxdgbj.mp4" type="video/mp4" />
+                </video>
+            </div>
+            {/* <h1 className="absolute top-0 left-0 opacity-0">Ignite the Night</h1>
             <h3 className="absolute top-0 left-0 opacity-0">with Afro-Latin Rhythms in Manila</h3>
             <div
                 className="p-6 h-full w-full text-white absolute grid place-items-center"
@@ -35,11 +46,11 @@ export default function Hero() {
                 style={{ ...styles, backgroundImage: `url(${HeroOverlay.src})` }}
             >
                 <div className="text-center font-header h-[20rem] flex flex-wrap content-end justify-center">
-                    <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded">
+                    <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
                         <span className="h3 text-[1.2rem]">Get Your Tickets Now</span>
                     </Link>
                 </div>
-            </div>
+            </div> */}
             {/* <p className="absolute inset-x-0 bottom-6 text-white text-center">
                 Scroll Down
             </p> */}

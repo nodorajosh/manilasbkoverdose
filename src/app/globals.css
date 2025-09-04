@@ -368,10 +368,10 @@ h6,
   left: calc(var(--size) / -2);
   width: calc(100% + var(--size));
   height: calc(100% + var(--size));
-  background: radial-gradient(circle at 0 0, hsl(27deg 93% 60%), transparent),
-    radial-gradient(circle at 100% 0, #00a6ff, transparent),
-    radial-gradient(circle at 0 100%, #ff0056, transparent),
-    radial-gradient(circle at 100% 100%, #6500ff, transparent);
+  background: radial-gradient(circle at 0 0, #FFD700, transparent),
+    radial-gradient(circle at 100% 0, #FFC107, transparent),
+    radial-gradient(circle at 0 100%, #FFB300, transparent),
+    radial-gradient(circle at 100% 100%, #FF8C00, transparent);
 
   border-radius: var(--radius)
 }
@@ -414,6 +414,7 @@ h6,
     background-position: 0% 50%;
   }
 }
+
 
 @theme {
 

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-// import Logo from "../assets/images/logo_manilasbk.png"
+// import Logo from "../assets/images/logo_manilasbkz.png"
 
 export default function Navbar() {
     const navlinks = [
@@ -21,7 +21,7 @@ export default function Navbar() {
                 <Link
                     href="#"
                 >
-                    <Image src="/images/logo_manilasbk.png" alt="Manila SBK Overdose Logo" width={150} height={150} className="w-[65px] sm:w-[95px] md:w-[150px] h-auto" />
+                    <Image src="/images/logo_manilasbkz.png" alt="Manila SBK Overdose Logo" width={150} height={150} className="w-[65px] sm:w-[95px] md:w-[150px] h-auto" />
                 </Link>
             </span>
             <span className="grid place-items-center">
@@ -35,7 +35,7 @@ export default function Navbar() {
                         </li>
                     ))}
                     <li className="w-[70px] md:w-[120px] lg:w-[140px] xl:w-[180px] grid place-items-center">
-                        <Link href="https://ticket.manilasbkoverdose.com/" className="px-3 cta rounded w-full grid place-items-center">
+                        <Link href="https://ticket.manilasbkoverdose.com/" className="px-3 cta rounded w-full grid place-items-center pointer-events-none" aira-disabled="true" tabIndex={-1}>
                             <span className="h3">Tickets</span>
                         </Link>
                     </li>
