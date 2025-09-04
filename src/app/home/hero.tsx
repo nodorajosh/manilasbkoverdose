@@ -1,11 +1,11 @@
 "use client"
 
-import Image from "next/image";
-import Link from "next/link";
+// import Image from "next/image";
+// import Link from "next/link";
 
-import HeroBG from "../../assets/images/manilasbk_hero_bg.png"
-import HeroText from "../../assets/images/manilasbk_hero_text.svg"
-import HeroOverlay from "../../assets/images/manilasbk_hero_overlay.png"
+// import HeroBG from "../../assets/images/manilasbk_hero_bg.png"
+// import HeroText from "../../assets/images/manilasbk_hero_text.svg"
+// import HeroOverlay from "../../assets/images/manilasbk_hero_overlay.png"
 
 const styles = {
     backgroundRepeat: "no-repeat",
