@@ -49,7 +49,7 @@ export default function ArtistsPageComponent({ imageObject }: {
             <div className="w-full">
 
                 <h1 className="pb-3 text-2xl text-center">
-                    <span className="mx-6 ul">&nbsp;Manila {year === "2025" || year === "2024" ? ("SBK") : ("SBKZ")} Overdose {year}&nbsp;</span>
+                    <span className="mx-6 ul">&nbsp;Manila {year === "2025" || year === "2024" ? ("SBKZ") : ("SBKZ")} Overdose {year}&nbsp;</span>
                 </h1>
                 {/* <div className="grid place-items-center">
                         <Image src={imageObject[year]["collage"]} alt="image" width={imageSize} height={imageSize} className="m-6 w-[75dvw] md:w-[50dvw] h-auto rounded" />

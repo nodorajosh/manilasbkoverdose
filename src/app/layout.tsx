@@ -6,7 +6,7 @@ import { Montserrat } from 'next/font/google'
 import localFont from "next/font/local"
 import "./globals.css";
 
-import Navbar from "@/components/navbar";
+import Navbar from "@/components/navbar/navbar";
 import Footer from "@/components/footer";
 
 // const brexon = localFont({
@@ -25,11 +25,11 @@ const clashDisplay = localFont({
 })
 
 export const metadata: Metadata = {
-  title: "Manila SBK Overdose | The Ultimate Afro-Latin Dance Festival",
+  title: "Manila SBKZ Overdose | The Ultimate Afro-Latin Dance Festival",
   description:
-    "Experience the most electrifying Afro-Latin dance festival in Manila! Join world-class instructors, social dance nights, and unforgettable performances at Manila SBK Overdose.",
+    "Experience the most electrifying Afro-Latin dance festival in Manila! Join world-class instructors, social dance nights, and unforgettable performances at Manila SBKZ Overdose.",
   keywords: [
-    "Manila SBK Overdose",
+    "Manila SBKZ Overdose",
     "Afro-Latin dance festival Manila",
     "Salsa Bachata Kizomba event",
     "dance bootcamp",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://manilasbkoverdose.com/",
-    title: "Manila SBK Overdose | The Ultimate Afro-Latin Dance Festival",
+    title: "Manila SBKZ Overdose | The Ultimate Afro-Latin Dance Festival",
     description:
       "Join the ultimate Afro-Latin dance festival in Manila with top international artists, workshops, and social dance nights.",
     images: [
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
         url: "https://manilasbkoverdose.com/banner.jpg",
         width: 1200,
         height: 630,
-        alt: "Manila SBK Overdose - Afro-Latin Dance Festival",
+        alt: "Manila SBKZ Overdose - Afro-Latin Dance Festival",
       },
     ],
   },

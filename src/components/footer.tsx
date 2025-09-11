@@ -3,7 +3,8 @@ import Link from "next/link";
 
 import WA from "../assets/images/wa.svg";
 import FB from "../assets/images/fb.svg";
-import IG from "../assets/images/ig.svg"
+import IG from "../assets/images/ig.svg";
+import LI from "../assets/images/link.svg";
 
 export default function Footer() {
 
@@ -16,15 +17,21 @@ export default function Footer() {
         },
         {
             title: "Facebook",
-            content: "Manila SBK Overdose",
+            content: "Manila SBKZ Overdose",
             link: "https://www.facebook.com/profile.php?id=61551057503242",
             image: FB
         },
         {
             title: "Instagram",
-            content: "Manila SBK Overdose",
-            link: "https://www.instagram.com/manilasbkoverdose",
+            content: "Manila SBKZ Overdose",
+            link: "https://www.instagram.com/manilasbkzoverdose",
             image: IG
+        },
+        {
+            title: "Campsite.bio",
+            content: "Manila SBKZ Overdose",
+            link: "https://campsite.bio/mnlsbkz ",
+            image: LI
         },
     ]
 
@@ -32,14 +39,14 @@ export default function Footer() {
     return (
         <nav className="w-full p-6 block md:flex justify-between content-center bg-black text-white font-body font-light">
             <Link href="/" className="grid place-items-center">
-                <Image src="/images/logo_manilasbkz.png" alt="Manila SBK Overdose Logo" width={150} height={150} className="w-[65px] sm:w-[95px] md:w-[150px] h-auto" />
+                <Image src="/images/logo_manilasbkz.png" alt="Manila SBKZ Overdose Logo" width={150} height={150} className="w-[65px] sm:w-[95px] md:w-[150px] h-auto" />
             </Link>
             <p className="p-6 grid md:w-3/12 place-items-center text-center">
                 Where Passion Meets Rhythm, and the World Dances as One.
                 <br />
                 <br />
                 <small>
-                    © 2025 Manila SBK Overdose
+                    © {new Date().getFullYear()} Manila SBKZ Overdose
                 </small>
             </p>
             <ul className="flex flex-col lg:flex-row md:h-auto content-center">
