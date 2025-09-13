@@ -6,10 +6,15 @@ import Link from "next/link";
 
 import { useSession, signOut } from "next-auth/react";
 
+import CA from "../../assets/images/cart.svg";
+import CartSidebar from "../cart";
+import { Provider } from "../providers";
+
 export default function Navlinks() {
     const { data: session } = useSession();
 
     const [open, setOpen] = useState(false)
+    const [openCart, setOpenCart] = useState(false)
 
     const ref = useRef<HTMLDivElement | null>(null);
 
@@ -50,7 +55,7 @@ export default function Navlinks() {
     }, []);
 
     return (
-        <ul className="px-2 py-1 flex flex-wrap justify-center content-center relative glass rounded text-white">
+        <ul className="px-2 py-1 flex flex-wrap justify-center content-center relative bg-gray-50/20 dark:bg-gray-950/20 shadow backdrop-blur-[7.5px] border-[1px] border-gray-50/10 dark:border-gray-950/10 rounded text-white">
             {navlinks.map((navlink) => (
                 <li
                     key={navlink.title}
@@ -60,7 +65,7 @@ export default function Navlinks() {
                 </li>
             ))}
             <li className="w-[70px] md:w-[120px] lg:w-[140px] xl:w-[180px] grid place-items-center">
-                <Link href="https://ticket.manilasbkoverdose.com/" className="px-3 cta rounded w-full grid place-items-center pointer-events-none" aira-disabled="true" tabIndex={-1}>
+                <Link href="/tickets" className="px-3 cta rounded w-full grid place-items-center">
                     <span className="h3">Tickets</span>
                 </Link>
             </li>
@@ -106,13 +111,13 @@ export default function Navlinks() {
             )}
 
             <div>
-                <div ref={ref} className={`px-4 py-8 w-full absolute top-9 right-0 glass rounded ${open ? "block" : "hidden"}`}>
+                <div ref={ref} className={`px-4 py-8 w-full absolute top-9 right-0 rounded bg-gray-50/20 dark:bg-gray-950/20 shadow backdrop-blur-[7.5px] border-[1px] border-gray-50/10 dark:border-gray-950/10 ${open ? "block" : "hidden"}`}>
                     <ul className="flex flex-col gap-4">
                         {session?.user ? (
                             <>
                                 {session?.user.role === "admin" && (
                                     <li>
-                                        <Link href={`/admin/${session.user.email}`} className="text-neutral-50 hover:text-neutral-200   ">Admin</Link>
+                                        <Link href={`/admin/${session.user.email}`} className="text-neutral-50 hover:text-neutral-200">Admin</Link>
                                     </li>
                                 )}
                                 <li>
@@ -129,6 +134,26 @@ export default function Navlinks() {
                         )}
                     </ul>
                 </div>
+
+                <div className="absolute -top-6 right-12">
+                    <button
+                        className="cursor-pointer flex items-center justify-center text-xs"
+                        onClick={() => setOpenCart(true)}
+                    >
+                        Cart
+                        <Image
+                            className="ml-2"
+                            src={CA}
+                            alt="Cart"
+                            width={15}
+                            height={15}
+                        />
+                    </button>
+                </div>
+
+                <Provider>
+                    <CartSidebar isOpen={openCart} onClose={() => setOpenCart(false)} />
+                </Provider>
             </div>
         </ul>
     )
