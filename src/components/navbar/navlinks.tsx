@@ -8,7 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 
 import CA from "../../assets/images/cart.svg";
 import CartSidebar from "../cart";
-import { Provider } from "../providers";
+
 
 export default function Navlinks() {
     const { data: session } = useSession();
@@ -21,11 +21,11 @@ export default function Navlinks() {
     const navlinks = [
         {
             title: "Trailer",
-            link: "#trailer"
+            link: "/#trailer"
         },
         {
             title: "Artists",
-            link: "#artists"
+            link: "/#artists"
         },
     ]
 
@@ -65,9 +65,9 @@ export default function Navlinks() {
                 </li>
             ))}
             <li className="w-[70px] md:w-[120px] lg:w-[140px] xl:w-[180px] grid place-items-center">
-                <Link href="/tickets" className="px-3 cta rounded w-full grid place-items-center">
+                <a href="/tickets" className="px-3 cta rounded w-full grid place-items-center">
                     <span className="h3">Tickets</span>
-                </Link>
+                </a>
             </li>
 
             {/* User avatar if logged in */}
@@ -151,9 +151,9 @@ export default function Navlinks() {
                     </button>
                 </div>
 
-                <Provider>
-                    <CartSidebar isOpen={openCart} onClose={() => setOpenCart(false)} />
-                </Provider>
+                <div ref={ref} className={`w-full absolute top-9 right-0 rounded ${openCart ? "block" : "hidden"}`}>
+                    <CartSidebar onClose={() => setOpenCart(false)} />
+                </div>
             </div>
         </ul>
     )

@@ -10,7 +10,7 @@ export default function ArtistsSectionComponent({ title, blurb, image }: { title
     return (
         <div className="relative flex flex-row flex-wrap">
             <div className="px-6 pt-12 pb-2 lg:pb-12 lg:min-h-[56dvh] w-full lg:w-[33%] bg-(--color-neutral-dark) grid place-items-center z-5">
-                <div className="glow px-6 py-6 shadow flex flex-col flex-wrap justify-center content-center bg-gradient-to-tr from-secondary-dark via-neutral-dark via-black via-neutral-dark to-secondary-dark rounded">
+                <div className="glow px-6 py-6 shadow flex flex-col flex-wrap justify-center content-center bg-gradient-to-tr from-peach-800 via-neutral-dark via-black via-neutral-dark to-peach-800 rounded">
                     <h1 className="text-2xl text-center">
                         <span className="">&nbsp;{title}&nbsp;</span>
                     </h1>

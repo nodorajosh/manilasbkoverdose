@@ -1,16 +1,26 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 
-import { useCart } from "@/hooks/useCart";
+import { useCartContext } from "@/contexts/CartContext";
 import Hero from "./hero";
 import Spinner from "@/components/spinner";
 
+type TicketType = {
+    _id: string; // or mongoose.Types.ObjectId if using mongoose types
+    eventId?: string; // optional
+    name: string;
+    price: number;
+    currency: string;
+    quantity: number;
+    sold: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
 export default function Main() {
-    const { data: session } = useSession();
-    const { addToCart } = useCart(session);
-    const [tickets, setTickets] = useState<any[]>([]);
+    const { addToCart } = useCartContext();
+    const [tickets, setTickets] = useState<TicketType[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
@@ -42,24 +52,26 @@ export default function Main() {
                     <div className="w-full">
                         <h1 className="text-2xl font-bold mb-4 text-center">Tickets</h1>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-5 rounded ">
                             {tickets.map((ticket) => (
                                 <div
                                     key={ticket._id}
-                                    className="border rounded-lg p-4 shadow-md flex flex-col justify-between"
+                                    className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark via-black via-neutral-dark to-peach-800 rounded bg-black p-4 shadow-md flex flex-col justify-between"
                                 >
                                     <h2 className="text-lg font-semibold">{ticket.name}</h2>
-                                    <p className="text-gray-700">
+                                    <p className="">
                                         {ticket.price} {ticket.currency}
                                     </p>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-gray-400">
                                         {ticket.quantity - ticket.sold} left
                                     </p>
                                     <button
-                                        onClick={() => addToCart(ticket.id)}
-                                        className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                                        onClick={() => {
+                                            addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, 1)
+                                        }}
+                                        className="mt-2 cta px-4 py-2 rounded-full"
                                     >
-                                        Add to Cart
+                                        <h3>Add to Cart</h3>
                                     </button>
                                 </div>
                             ))}

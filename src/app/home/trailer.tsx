@@ -17,7 +17,7 @@ export default function Trailer() {
             </div>
             {/* <div className="pl-6 w-full lg:w-[33%] flex flex-col flex-wrap justify-center content-center"> */}
             <div className="relative px-6 pt-2 lg:pt-12 pb-12 w-full lg:w-[33%] bg-black grid place-items-center z-5">
-                <div className="glow px-6 py-6 shadow flex flex-col flex-wrap justify-center content-center bg-gradient-to-tr from-secondary-dark via-neutral-dark via-black via-neutral-dark to-secondary-dark rounded">
+                <div className="glow px-6 py-6 shadow flex flex-col flex-wrap justify-center content-center bg-gradient-to-tr from-peach-800 via-neutral-dark via-black via-neutral-dark to-peach-800 rounded">
                     <h1 className="text-2xl text-center">
                         <span className="ul">&nbsp;Feel the Pulse Before It Begins&nbsp;</span>
                     </h1>

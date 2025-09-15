@@ -1,20 +1,21 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
 type CartItem = {
+    ticketName: string;
+    ticketPrice: number;
+    ticketCurrency: string;
     ticketId: string;
-    name: string;
-    price: number;
     quantity: number;
 };
 
 type CartContextType = {
     cart: CartItem[];
-    addToCart: (ticket: CartItem) => void;
-    removeFromCart: (ticketId: string) => void;
-    clearCart: () => void;
+    addToCart: (name: string, price: number, currency: string, ticketId: string, quantity?: number) => Promise<void>;
+    removeFromCart: (ticketId: string) => Promise<void>;
+    clearCart: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -23,98 +24,75 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
     const [cart, setCart] = useState<CartItem[]>([]);
 
-    // --- Fetch cart on login ---
+    // 🔄 Load cart (Mongo if logged in, localStorage if not)
     useEffect(() => {
-        if (session?.user) {
-            fetch("/api/cart")
-                .then((res) => res.json())
-                .then((data) => {
-                    const items = data.items.map((item: any) => ({
-                        ticketId: item.ticketId._id,
-                        name: item.ticketId.name,
-                        price: item.ticketId.price,
-                        quantity: item.quantity,
-                    }));
-                    setCart(items);
-                });
-        } else {
-            // Load from localStorage if not logged in
-            const localCart = localStorage.getItem("cart");
-            if (localCart) {
-                setCart(JSON.parse(localCart));
+        const loadCart = async () => {
+            if (session?.user) {
+                const res = await fetch("/api/cart");
+                const data = await res.json();
+                setCart(data.items ?? []);
+            } else {
+                const localCart = localStorage.getItem("cart");
+                setCart(localCart ? JSON.parse(localCart) : []);
             }
-        }
+        };
+        loadCart();
     }, [session]);
 
-    // --- Sync cart to localStorage if not logged in ---
+    // 🔄 Keep localStorage in sync when logged out
     useEffect(() => {
         if (!session?.user) {
             localStorage.setItem("cart", JSON.stringify(cart));
         }
     }, [cart, session]);
 
-    const addToCart = async (ticket: CartItem) => {
-        if (session?.user) {
-            // persistent cart
-            const res = await fetch("/api/cart", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ticketId: ticket.ticketId, quantity: 1 }),
-            });
-            if (res.ok) {
+    // 🛒 Actions
+    const addToCart = useCallback(
+        async (ticketName: string, ticketPrice: number, ticketCurrency: string, ticketId: string, quantity = 1) => {
+            if (session?.user) {
+                await fetch("/api/cart", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticketName, ticketPrice, ticketCurrency, ticketId, quantity }),
+                });
+                const res = await fetch("/api/cart");
                 const data = await res.json();
-                const items = data.items.map((item: any) => ({
-                    ticketId: item.ticketId._id,
-                    name: item.ticketId.name,
-                    price: item.ticketId.price,
-                    quantity: item.quantity,
-                }));
-                setCart(items);
+                setCart(data.items ?? []);
+            } else {
+                setCart((prev) => {
+                    const existing = prev.find((i) => i.ticketId === ticketId);
+                    if (existing) {
+                        return prev.map((i) =>
+                            i.ticketId === ticketId ? { ...i, quantity: i.quantity + quantity } : i
+                        );
+                    }
+                    return [...prev, { ticketName, ticketPrice, ticketCurrency, ticketId, quantity }];
+                });
             }
-        } else {
-            // guest cart
-            setCart((prev) => {
-                const existing = prev.find((i) => i.ticketId === ticket.ticketId);
-                if (existing) {
-                    return prev.map((i) =>
-                        i.ticketId === ticket.ticketId
-                            ? { ...i, quantity: i.quantity + 1 }
-                            : i
-                    );
-                }
-                return [...prev, { ...ticket, quantity: 1 }];
-            });
-        }
-    };
+        },
+        [session]
+    );
 
-    const removeFromCart = async (ticketId: string) => {
-        if (session?.user) {
-            const res = await fetch("/api/cart", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ticketId }),
-            });
-            if (res.ok) {
+    const removeFromCart = useCallback(
+        async (ticketId: string) => {
+            if (session?.user) {
+                await fetch(`/api/cart?ticketId=${ticketId}`, { method: "DELETE" });
+                const res = await fetch("/api/cart");
                 const data = await res.json();
-                const items = data.items.map((item: any) => ({
-                    ticketId: item.ticketId._id,
-                    name: item.ticketId.name,
-                    price: item.ticketId.price,
-                    quantity: item.quantity,
-                }));
-                setCart(items);
+                setCart(data.items ?? []);
+            } else {
+                setCart((prev) => prev.filter((i) => i.ticketId !== ticketId));
             }
-        } else {
-            setCart((prev) => prev.filter((i) => i.ticketId !== ticketId));
-        }
-    };
+        },
+        [session]
+    );
 
-    const clearCart = () => {
+    const clearCart = useCallback(async () => {
+        if (session?.user) {
+            await fetch("/api/cart", { method: "DELETE" });
+        }
         setCart([]);
-        if (!session?.user) {
-            localStorage.removeItem("cart");
-        }
-    };
+    }, [session]);
 
     return (
         <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
@@ -123,10 +101,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
 }
 
-export function useCart() {
+export const useCartContext = () => {
     const ctx = useContext(CartContext);
-    if (!ctx) {
-        throw new Error("useCart must be used within CartProvider");
-    }
+    if (!ctx) throw new Error("useCartContext must be used inside CartProvider");
     return ctx;
-}
+};

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Provider } from "../providers";
+
 
 import Navlinks from "./navlinks";
 
@@ -16,9 +16,7 @@ export default function Navbar() {
                 </Link>
             </span>
             <span className="grid place-items-center">
-                <Provider>
-                    <Navlinks />
-                </Provider>
+                <Navlinks />
             </span>
         </nav >
     );

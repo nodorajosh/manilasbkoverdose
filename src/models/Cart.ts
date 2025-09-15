@@ -1,10 +1,13 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import { Schema, model, models } from "mongoose";
 
 const CartSchema = new Schema(
     {
         userId: { type: String, required: true, unique: true },
         items: [
             {
+                ticketName: { type: String, required: true },
+                ticketPrice: { type: Number, required: true },
+                ticketCurrency: { type: String, required: true },
                 ticketId: { type: Schema.Types.ObjectId, ref: "Ticket", required: true },
                 quantity: { type: Number, default: 1 },
             },

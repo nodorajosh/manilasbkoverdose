@@ -8,6 +8,7 @@ import "./globals.css";
 
 import Navbar from "@/components/navbar/navbar";
 import Footer from "@/components/footer";
+import { Providers } from "@/components/providers";
 
 // const brexon = localFont({
 //   src: "../assets/fonts/brexon.regular.ttf",
@@ -71,9 +72,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${clashDisplay.className} ${montserrat.className}`}>
-        <Navbar />
-        {children}
-        <Footer />
+        <Providers>
+          <Navbar />
+          {children}
+          <Footer />
+        </Providers>
         <Analytics />
         <SpeedInsights />
       </body>

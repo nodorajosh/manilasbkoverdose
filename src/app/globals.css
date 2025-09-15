@@ -104,7 +104,7 @@ h6,
 }
 
 .ul {
-  background-image: linear-gradient(to top right, var(--color-accent-dark), var(--color-accent-light));
+  background-image: linear-gradient(to top right, var(--color-peach-600), var(--color-peach-200));
   color: #fff;
   /* background-position: 0 0rem;
   background-repeat: repeat-x;
@@ -114,7 +114,7 @@ h6,
 .cta {
   position: relative;
   /* border: 1px solid #D4AF37; */
-  background: linear-gradient(to right top in hsl, var(--color-accent-dark), var(--color-accent-light));
+  background: linear-gradient(to right top in hsl, var(--color-peach-600), var(--color-peach-200));
   color: #fff;
   overflow: hidden;
   box-shadow: 0 0 0 0 transparent;
@@ -125,7 +125,7 @@ h6,
 
 .cta:hover {
   /* border: 1px solid #D4AF37; */
-  background: linear-gradient(to right top in hsl, var(--color-accent), var(--color-accent-light));
+  background: linear-gradient(to right top in hsl, var(--color-peach-300), var(--color-peach-200));
   box-shadow: 0 0 30px 5px rgba(212, 175, 55, 0.815);
   -webkit-transition: all 0.2s ease-out;
   -moz-transition: all 0.2s ease-out;
@@ -413,9 +413,17 @@ h6,
   --color-secondary: #73146c;
   --color-secondary-light: #ffc4fb;
   --color-secondary-dark: #40183d;
-  --color-accent: #d4af37;
-  --color-accent-light: #e0ca82;
-  --color-accent-dark: #65541a;
+  --color-peach-50: #feefd4;
+  --color-peach-100: #fde3aa;
+  --color-peach-200: #f1c840;
+  --color-peach-300: #d4af37;
+  --color-peach-400: #b2932d;
+  --color-peach-500: #947923;
+  --color-peach-600: #77611a;
+  --color-peach-700: #584711;
+  --color-peach-800: #3e3109;
+  --color-peach-900: #231b03;
+  --color-peach-950: #161002;
   --color-neutral-dark: #0d0d0d;
 
   --font-header: clashDisplay, clashDisplay Fallback;
