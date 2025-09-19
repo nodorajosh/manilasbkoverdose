@@ -5,5 +5,8 @@ import { authOptions } from "./authOptions";
 export async function getServerAuth() {
     // In App Router server components / server actions, use:
     const session = await getServerSession(authOptions);
+
+    console.log("session:", session);
+
     return session;
 }
