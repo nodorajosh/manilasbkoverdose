@@ -9,6 +9,7 @@ export default withAuth({
 
             // admin-only paths
             if (url.startsWith("/admin")) {
+                console.log(token?.role)
                 return token?.role === "admin";
             }
 
