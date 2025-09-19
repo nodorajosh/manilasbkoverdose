@@ -65,7 +65,7 @@ export default function Navlinks() {
                 </li>
             ))}
             <li className="w-[70px] md:w-[120px] lg:w-[140px] xl:w-[180px] grid place-items-center">
-                <a href="/tickets" className="px-3 cta rounded w-full grid place-items-center">
+                <a href="/tickets" className="px-3 cta cta-solid rounded w-full grid place-items-center">
                     <span className="h3">Tickets</span>
                 </a>
             </li>
@@ -117,14 +117,14 @@ export default function Navlinks() {
                             <>
                                 {session?.user.role === "admin" && (
                                     <li>
-                                        <Link href={`/admin/${session.user.email}`} className="text-neutral-50 hover:text-neutral-200">Admin</Link>
+                                        <Link href="/admin" className="text-neutral-50 hover:text-neutral-200">Admin</Link>
                                     </li>
                                 )}
                                 <li>
                                     <Link href={`/user/${session.user.email}`} className="text-neutral-50 hover:text-neutral-200">Dashboard</Link>
                                 </li>
                                 <li>
-                                    <button className="text-neutral-50 hover:text-neutral-200 cursor-pointer" onClick={() => signOut({ callbackUrl: "/" })}>Sign Out</button>
+                                    <button className="text-neutral-50 hover:text-neutral-200" onClick={() => signOut({ callbackUrl: "/" })}>Sign Out</button>
                                 </li>
                             </>
                         ) : (

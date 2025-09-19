@@ -13,7 +13,7 @@ export default function Preface() {
                 Manila comes alive with the sound of Salsa, Bachata, Kizomba, and Zouk. For three exhilarating days, the festival transforms into a playground of rhythm and connection. Learn from world-class instructors, share unforgettable moments with dancers from around the globe, and let the nights sweep you into music and motion that never let go. This isn&apos;t just a festival—it&apos;s a movement, and you&apos;re at the heart of it.
             </p>
             <div className="text-center font-header flex flex-wrap content-end justify-center">
-                <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
+                <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta cta-solid rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
                     <span className="h3 text-[1.2rem]">Grab Your Pass and Let&apos;s Dance</span>
                 </Link>
             </div>

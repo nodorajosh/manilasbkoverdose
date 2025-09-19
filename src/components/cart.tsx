@@ -3,7 +3,7 @@
 import { useCartContext } from "@/contexts/CartContext";
 
 export default function CartSidebar({ onClose }: { onClose: () => void }) {
-    const { cart, removeFromCart, clearCart } = useCartContext();
+    const { cart, removeFromCart, clearCart, handleCheckout } = useCartContext();
 
     return (
         <div className="fixed right-0 top-0 h-dvh w-80 rounded bg-gray-950/50 backdrop-blur-[7.5px] border-[1px] border-gray-50/10 px-6 py-12">
@@ -21,7 +21,7 @@ export default function CartSidebar({ onClose }: { onClose: () => void }) {
                             <span>x {item.quantity}</span>
                             <button
                                 onClick={() => removeFromCart(item.ticketId)}
-                                className="text-red-600 cursor-pointer hover:text-red-800">
+                                className="text-red-600 hover:text-red-800">
                                 &#10006;
                             </button>
                         </div>
@@ -35,10 +35,13 @@ export default function CartSidebar({ onClose }: { onClose: () => void }) {
                         <p>{cart[0].ticketCurrency} {cart.reduce((amount, { quantity, ticketPrice }) => quantity * ticketPrice + amount, 0)}</p>
                     </div>
                     <div className="p-4 border-t flex justify-between">
-                        <button onClick={clearCart} className="bg-gray-300 text-gray-600 px-3 py-1 rounded-full cursor-pointer hover:bg-gray-400">
+                        <button onClick={clearCart} className="bg-gray-300 text-gray-600 px-3 py-1 rounded-full hover:bg-gray-400">
                             Clear
                         </button>
-                        <button className="cta text-white px-3 py-1 rounded-full cursor-pointer">
+                        <button
+                            className="cta cta-solid text-white px-3 py-1 rounded-full"
+                            onClick={() => handleCheckout()}
+                        >
                             <h3>
                                 Checkout
                             </h3>

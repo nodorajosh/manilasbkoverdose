@@ -16,6 +16,7 @@ type CartContextType = {
     addToCart: (name: string, price: number, currency: string, ticketId: string, quantity?: number) => Promise<void>;
     removeFromCart: (ticketId: string) => Promise<void>;
     clearCart: () => Promise<void>;
+    handleCheckout: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -94,8 +95,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCart([]);
     }, [session]);
 
+    const handleCheckout = async () => {
+        if (!session?.user) {
+            alert("You need to log in to checkout.");
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items: cart }),
+            });
+
+            if (!res.ok) {
+                throw new Error("Checkout failed");
+            }
+
+            const { redirectUrl } = await res.json();
+
+            // Redirect to Wise payment page
+            window.location.href = redirectUrl;
+        } catch (err) {
+            console.error("Checkout error:", err);
+            alert("Something went wrong during checkout.");
+        }
+    };
+
     return (
-        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
+        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, handleCheckout }}>
             {children}
         </CartContext.Provider>
     );

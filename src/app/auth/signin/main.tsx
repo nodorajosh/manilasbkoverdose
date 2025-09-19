@@ -19,13 +19,13 @@ export default function Main() {
 
     useEffect(() => {
         if (session?.user) {
-            router.push("/"); // redirect logged-in user
+            router.push("/tickets"); // redirect logged-in user
         }
     }, [session, router]);
 
     return (
         <main className="relative h-dvh w-full flex flex-wrap flex-col justify-center content-center px-6 py-12 bg-black z-5">
-            <div className="glow px-6 py-12 border rounded max-w-md w-full mx-auto bg-white">
+            <div className="glow px-6 py-12 border rounded max-w-md w-full mx-auto bg-white text-black">
                 <h1 className="text-2xl pb-3 text-center">Sign in</h1>
 
                 <button
@@ -34,7 +34,7 @@ export default function Main() {
                         await signIn("google")
                         setStatus(null);
                     }}
-                    className={`px-4 py-2 w-full mb-3 flex justify-between items-center border rounded capitalize cursor-pointer 
+                    className={`px-4 py-2 w-full mb-3 flex justify-between items-center border rounded capitalize 
                     ${status === "loading" ?
                             "bg-gray-200 cursor-not-allowed" :
                             "bg-white hover:bg-gray-100"}`}
@@ -77,7 +77,7 @@ export default function Main() {
                         />
                     </label>
 
-                    <button className={`px-4 py-2 w-full mb-3 flex items-center border rounded capitalize cursor-pointer text-white 
+                    <button className={`px-4 py-2 w-full mb-3 flex items-center border rounded capitalize text-white 
                     ${status === "sending" ?
                             "justify-between bg-gray-600 cursor-not-allowed" :
                             "justify-center bg-black hover:bg-gray-800"}`}

@@ -13,7 +13,7 @@ export default function Closing() {
                 This isn&apos;t just an event—it&apos;s your chance to belong, to grow, and to celebrate. Every class, every party, every song brings you closer to something bigger than dance. When the weekend ends, you won&apos;t just remember the music—you&apos;ll remember the friendships, the breakthroughs, and the moments that stay with you long after the lights fade. The floor is waiting. Will you step into it?
             </p>
             <div className="text-center font-header flex flex-wrap content-end justify-center">
-                <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
+                <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta cta-solid rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
                     <span className="h3 text-[1.2rem]">Join The Festival Now</span>
                 </Link>
             </div>
