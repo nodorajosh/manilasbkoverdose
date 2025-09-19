@@ -7,6 +7,7 @@ import AdminTabs from "./admin-tabs";
 export default async function AdminPage() {
     const session = await getServerAuth();
     if (!session?.user || (session.user as any).role !== "admin") { // eslint-disable-line @typescript-eslint/no-explicit-any
+        console.log(session);
         redirect("/auth/signin"); // or a 403 page
     }
 
