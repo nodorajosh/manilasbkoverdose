@@ -2,6 +2,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+
+import { ToastProvider } from "@/components/toast-provider";
+
 import TicketsAdmin from "./tickets-admin";
 import DiscountsAdmin from "./discounts-admin";
 import OrdersAdmin from "./orders-admin";
@@ -15,7 +18,7 @@ const TABS: { id: TabId; title: string; desc?: string }[] = [
 ];
 
 export default function AdminTabs() {
-    const [active, setActive] = useState<TabId>("tickets");
+    const [active, setActive] = useState<TabId>("orders");
     const tabsRef = useRef<Array<HTMLButtonElement | null>>([]);
     const panelsRef = useRef<Record<TabId, HTMLDivElement | null>>({
         orders: null,
@@ -78,7 +81,10 @@ export default function AdminTabs() {
                             <h2 className="text-xl font-semibold">Manage Orders</h2>
                             <p className="text-sm text-white/70">View incoming orders, update statuses and fulfill.</p>
                         </div>
-                        <OrdersAdmin />
+                        <ToastProvider>
+                            <OrdersAdmin />
+                        </ToastProvider>
+
                     </div>
 
                     {/* Tickets */}

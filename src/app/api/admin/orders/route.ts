@@ -54,17 +54,14 @@ export async function PATCH(req: Request) {
             }
         }
 
-        await order.save(async (err: any, order: any) => { //eslint-disable-line @typescript-eslint/no-explicit-any
-            if (err) {
-                return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
-            }
-            if (order.status === "paid") {
-                // send email to user about status update
-                const purchaser = await User.findOne({ email: order.userEmail });
-                await sendMail({
-                    to: order.userEmail,
-                    subject: "Your order is confirmed",
-                    html: `
+        await order.save();
+        const purchaser = await User.findOne({ email: order.userId });
+        if (order.status === "paid") {
+            // send email to user about status update
+            await sendMail({
+                to: order.userId,
+                subject: "Your order is confirmed",
+                html: `
                 <h1>Payment Confirmed</h1>
                 <p>Hi, ${purchaser.name ? purchaser.name : purchaser.email.split("@")[0]} Your order for <strong>${order.items.length}</strong> item(s) has been confirmed.</p>
                 <p>Status: <b>Paid</b></p>
@@ -72,22 +69,20 @@ export async function PATCH(req: Request) {
                 <br />
                 <p>We look forward to seeing you at the event!</p>
                 `,
-                });
-            }
-            if (order.status === "cancelled") {
-                // send email to user about status update
-                const purchaser = await User.findOne({ email: order.userEmail });
-                await sendMail({
-                    to: order.userEmail,
-                    subject: "Your order has been cancelled",
-                    html: `
+            });
+        }
+        if (order.status === "cancelled") {
+            // send email to user about status update
+            await sendMail({
+                to: order.userId,
+                subject: "Your order has been cancelled",
+                html: `
                 <h1>Order Cancelled</h1>
                 <p>Hi, ${purchaser.name ? purchaser.name : purchaser.email.split("@")[0]} Your order for <strong>${order.items.length}</strong> item(s) has been cancelled.</p>
                 <p>Status: <b>Cancelled</b></p>
                 `,
-                });
-            }
-        });
+            });
+        }
 
         return NextResponse.json({ order });
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
