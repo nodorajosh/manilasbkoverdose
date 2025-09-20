@@ -4,8 +4,8 @@ import { Schema, model, models } from "mongoose";
 const WiseSchema = new Schema(
     {
         enabled: { type: Boolean, default: false },
-        paymentLink: { type: String, default: null }, // e.g. a Wise deposit/payment URL (if you use one)
-        depositInstructions: { type: String, default: null }, // optional human-readable instructions
+        paymentLink: { type: String, default: null },
+        depositInstructions: { type: String, default: null },
     },
     { _id: false }
 );
@@ -25,13 +25,20 @@ const TicketSchema = new Schema(
     {
         name: { type: String, required: true },
         description: { type: String },
-        price: { type: Number, required: true }, // cents
+        // price stored as integer cents (e.g. 10000 = $100.00)
+        price: { type: Number, required: true },
         currency: { type: String, required: true, default: "USD" },
         quantity: { type: Number, required: true },
         sold: { type: Number, default: 0 },
         metadata: { type: Schema.Types.Mixed },
         thumbnail: ThumbnailSchema,
         wise: WiseSchema,
+        // status helps manage current vs archived tickets
+        status: {
+            type: String,
+            enum: ["active", "archived", "draft"],
+            default: "active",
+        },
     },
     { timestamps: true }
 );

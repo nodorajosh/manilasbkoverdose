@@ -29,6 +29,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^20.19.13",
+    "@types/nodemailer": "^7.0.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19",
     "@types/webpack-env": "^1.18.8",

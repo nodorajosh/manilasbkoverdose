@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/authOptions";
 import { connectMongoose } from "@/lib/mongoose";
 import { Ticket } from "@/models/Ticket";
 import Order from "@/models/Order";
+import { sendMail } from "@/lib/mailer";
 
 /**
  * Payload:
@@ -73,6 +74,23 @@ export async function POST(req: Request) {
                 paymentLink: paymentLink ?? null,
                 depositInstructions: depositInstructions ?? null,
             },
+        });
+
+        // Send "Order Created" email
+        await sendMail({
+            to: session.user.email,
+            subject: "Your order has been created",
+            html: `
+        <h1>Order Created</h1>
+        <p>Thank you, ${session.user.name ? session.user.name : session.user.email.split("@")[0]} for ordering <strong>${ticket.name}</strong>.</p>
+        <p>Status: <b>Pending</b></p>
+        <p>Please complete your payment using the Wise payment link provided.</p>
+        <br />
+        <br />
+        <p><a href="${paymentLink}">Pay with Wise</a></p>
+        ${depositInstructions ? `<h2>Deposit Instructions</h2><p>${depositInstructions}</p>` : ""}
+        <h2>Order Summary</h2>
+      `,
         });
 
         return NextResponse.json({ order });

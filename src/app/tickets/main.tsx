@@ -173,7 +173,7 @@ export default function Main() {
                                 return (
                                     <div
                                         key={ticket._id}
-                                        className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded p-4 shadow-md flex flex-col justify-between"
+                                        className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between"
                                     >
                                         <div>
                                             {ticket.thumbnail?.dataUrl ? (
@@ -181,23 +181,23 @@ export default function Main() {
                                                     <img
                                                         src={ticket.thumbnail.dataUrl}
                                                         alt={`${ticket.name} thumbnail`}
-                                                        className="w-[180px] h-[320px] object-cover rounded-md"
+                                                        className="w-full aspect-video object-cover rounded-t-2xl"
                                                     />
                                                 </div>
                                             ) : null}
 
-                                            <h2 className="text-lg font-semibold">{ticket.name}</h2>
-                                            {ticket.description && <p className="text-sm text-gray-300 mb-2">{ticket.description}</p>}
+                                            <h2 className="px-4 text-lg font-semibold">{ticket.name}</h2>
+                                            {ticket.description && <p className="px-4 text-sm text-gray-300 mb-2">{ticket.description}</p>}
 
-                                            <div className="flex items-baseline gap-2">
+                                            <div className="px-4 flex items-baseline gap-2">
                                                 <div className="text-xl font-bold">${ticket.price}</div>
                                                 <div className="text-sm text-gray-400"> {ticket.currency}</div>
                                             </div>
 
-                                            <p className="text-sm text-gray-400 mt-1">{remaining} left</p>
+                                            <p className="px-4  text-sm text-gray-400 mt-1">{remaining} left</p>
                                         </div>
 
-                                        <div className="mt-4 flex flex-col gap-2">
+                                        <div className="mt-4 px-4 pb-4 flex flex-col gap-2">
                                             <button
                                                 onClick={() => addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, 1)}
                                                 className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
