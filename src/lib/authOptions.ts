@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
                     // Insert a minimal adapter-compatible accounts document linking to the user
                     // The adapter uses at least: provider, type, providerAccountId, userId
                     // Add token fields if present (helpful but not required).
-                    const doc: any = {
+                    const doc: any = { //eslint-disable-line @typescript-eslint/no-explicit-any
                         provider: account.provider,
                         type: account.type ?? "oauth",
                         providerAccountId,
