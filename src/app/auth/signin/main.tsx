@@ -22,7 +22,7 @@ export default function Main() {
             router.push("/tickets"); // redirect logged-in user
         }
         if (session?.user && !session.user.profileComplete) {
-            router.push("/profile"); // redirect logged-in user
+            router.push("/user"); // redirect logged-in user
         }
     }, [session, router]);
 
