@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/authOptions";
 import { connectMongoose } from "@/lib/mongoose";
 import Order from "@/models/Order";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.email) {
