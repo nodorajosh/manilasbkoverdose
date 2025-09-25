@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { getServerAuth } from "@/lib/getServerAuth";
 import OrderDetails from "./order-details";
 
-type Props = {
-    params: { id: string };
-};
+type PageParams = Promise<{ id: string }>; // Example for a single 'id' parameter
+
+interface Props {
+    params: PageParams; // Using the Promise type for params
+}
 
 export default async function OrderPage({ params }: Props) {
     const { id } = await params
