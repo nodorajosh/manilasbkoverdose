@@ -25,7 +25,7 @@ export default function Trailer() {
                         Hit play and let the story unfold. Bright lights, powerful beats, and dancers moving as one—this is the heartbeat of SBKZ. From sunrise workshops that spark growth to late-night socials that never seem to end, our festival trailer gives you a taste of the rhythm, the passion, and the unforgettable nights waiting in Manila.
                     </p>
                     <div className="text-center font-header flex flex-wrap content-end justify-center">
-                        <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta cta-solid rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
+                        <Link href="/tickets" className="px-6 cta cta-solid rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
                             <span className="h3 text-[1.2rem]">Join the Celebration</span>
                         </Link>
                     </div>

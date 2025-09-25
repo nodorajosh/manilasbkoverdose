@@ -114,7 +114,7 @@ export default function ArtistsPageComponent({ imageObject }: {
             </div>
 
             <div className="sticky bottom-12 text-center font-header flex flex-wrap content-end justify-center z-8">
-                <Link href="https://ticket.manilasbkoverdose.com/products/full-event-pass-1" className="px-6 cta cta-solid rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
+                <Link href="/tickets" className="px-6 cta cta-solid rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
                     <span className="h3 text-[1.2rem]">Join Us Now</span>
                 </Link>
             </div>

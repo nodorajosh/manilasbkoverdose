@@ -18,8 +18,11 @@ export default function Main() {
     const [status, setStatus] = useState<null | string>(null);
 
     useEffect(() => {
-        if (session?.user) {
+        if (session?.user && session.user.profileComplete) {
             router.push("/tickets"); // redirect logged-in user
+        }
+        if (session?.user && !session.user.profileComplete) {
+            router.push("/profile"); // redirect logged-in user
         }
     }, [session, router]);
 

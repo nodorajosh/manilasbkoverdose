@@ -3,8 +3,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-import { ToastProvider } from "@/components/toast-provider";
-
 import TicketsAdmin from "./tickets-admin";
 import DiscountsAdmin from "./discounts-admin";
 import OrdersAdmin from "./orders-admin";
@@ -81,9 +79,7 @@ export default function AdminTabs() {
                             <h2 className="text-xl font-semibold">Manage Orders</h2>
                             <p className="text-sm text-white/70">View incoming orders, update statuses and fulfill.</p>
                         </div>
-                        <ToastProvider>
-                            <OrdersAdmin />
-                        </ToastProvider>
+                        <OrdersAdmin />
 
                     </div>
 

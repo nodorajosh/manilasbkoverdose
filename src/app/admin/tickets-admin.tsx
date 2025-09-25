@@ -2,20 +2,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ToastProvider, useToast } from "@/components/toast-provider";
+import { useToast } from "@/components/toast-provider";
 import ConfirmModal from "@/components/confirm-modal";
 import TicketForm, { Ticket } from "./ticket-form";
+import Spinner from "@/components/spinner";
 
-export default function TicketsAdminShell() {
-    // wrap inner admin with ToastProvider so toast is available
-    return (
-        <ToastProvider>
-            <TicketsAdmin />
-        </ToastProvider>
-    );
-}
-
-function TicketsAdmin() {
+export default function TicketsAdmin() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"active" | "archived" | "all">("active");
@@ -123,7 +115,10 @@ function TicketsAdmin() {
 
             <div>
                 {loading ? (
-                    <div>Loading...</div>
+                    <span className="flex items-center gap-3">
+                        <Spinner />
+                        <p className="ml-2 text-gray-400">Loading tickets...</p>
+                    </span>
                 ) : tickets.length === 0 ? (
                     <div className="text-sm text-gray-400">No tickets found.</div>
                 ) : (

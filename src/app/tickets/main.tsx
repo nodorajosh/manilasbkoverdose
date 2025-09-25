@@ -123,8 +123,6 @@ export default function Main() {
 
             const payload = await res.json();
 
-            console.log("Create order response:", { res, payload });
-
             if (!res.ok) {
                 setOrderError(payload?.error || "Failed to create order");
                 setCreatingOrder(false);
@@ -208,15 +206,27 @@ export default function Main() {
 
                                             {ticket.wise?.enabled && ticket.wise?.paymentLink ? (
                                                 <>
+
                                                     {session?.user ? (
-                                                        <button
-                                                            onClick={() => openWiseModal(ticket)}
-                                                            className="mt-2 flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
-                                                        >
-                                                            <span>Buy with</span>
-                                                            <Image src={WI} alt="wise" width={20} height={20} />
-                                                            <span>Wise</span>
-                                                        </button>
+                                                        <>
+                                                            {session?.user.profileComplete ? (
+                                                                <button
+                                                                    onClick={() => openWiseModal(ticket)}
+                                                                    className="mt-2 flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
+                                                                >
+                                                                    <span>Buy with</span>
+                                                                    <Image src={WI} alt="wise" width={20} height={20} />
+                                                                    <span>Wise</span>
+                                                                </button>
+                                                            ) : (
+                                                                <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
+                                                                    <span>Complete your profile to buy with</span>
+                                                                    <Image src={WI} alt="wise" width={20} height={20} />
+                                                                    <span>Wise</span>
+                                                                </Link>
+                                                            )}
+                                                        </>
+
                                                     ) : (
                                                         <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
                                                             <span>Sign in to buy with</span>
@@ -268,15 +278,25 @@ export default function Main() {
                             {wiseModalData.paymentLink ? (
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() =>
-                                                createOrderAndOpenWise(wiseModalData.ticketId, wiseModalData.paymentLink, wiseModalData.instructions)
-                                            }
-                                            disabled={creatingOrder}
-                                            className="inline-block mt-2 cta cta-solid text-black px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
-                                        >
-                                            {creatingOrder ? "Creating order..." : "Open Wise Payment Details"}
-                                        </button>
+                                        {createdOrderId ? (
+                                            <a
+                                                href={wiseModalData.paymentLink}
+                                                className="inline-block mt-2 cta cta-solid text-black text-center px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
+                                                target="_blank"
+                                            >
+                                                Open Wise Payment Details
+                                            </a>
+                                        ) : (
+                                            <button
+                                                onClick={() =>
+                                                    createOrderAndOpenWise(wiseModalData.ticketId, wiseModalData.paymentLink, wiseModalData.instructions)
+                                                }
+                                                disabled={creatingOrder}
+                                                className="inline-block mt-2 cta cta-solid text-black px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
+                                            >
+                                                {creatingOrder ? "Creating order..." : "Open Wise Payment Details"}
+                                            </button>
+                                        )}
 
                                         {createdOrderId && (
                                             <div className="text-sm text-green-700">

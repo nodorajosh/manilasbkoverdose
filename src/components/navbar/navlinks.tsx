@@ -121,7 +121,7 @@ export default function Navlinks() {
                                     </li>
                                 )}
                                 <li>
-                                    <Link href={`/user/${session.user.email}`} className="text-neutral-50 hover:text-neutral-200">Dashboard</Link>
+                                    <Link href={`/user`} className="text-neutral-50 hover:text-neutral-200">Account</Link>
                                 </li>
                                 <li>
                                     <button className="text-neutral-50 hover:text-neutral-200" onClick={() => signOut({ callbackUrl: "/" })}>Sign Out</button>

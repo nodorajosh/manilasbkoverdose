@@ -2,19 +2,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ToastProvider, useToast } from "@/components/toast-provider";
+import { useToast } from "@/components/toast-provider";
 import ConfirmModal from "@/components/confirm-modal";
 import DiscountForm, { Discount } from "./discount-form";
+import Spinner from "@/components/spinner";
 
-export default function DiscountsAdminShell() {
-    return (
-        <ToastProvider>
-            <DiscountsAdmin />
-        </ToastProvider>
-    );
-}
-
-function DiscountsAdmin() {
+export default function DiscountsAdmin() {
     const [discounts, setDiscounts] = useState<Discount[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"active" | "archived" | "all">("active");
@@ -105,7 +98,10 @@ function DiscountsAdmin() {
 
             <div>
                 {loading ? (
-                    <div>Loading...</div>
+                    <span className="flex items-center gap-3">
+                        <Spinner />
+                        <p className="ml-2 text-gray-400">Loading discounts...</p>
+                    </span>
                 ) : discounts.length === 0 ? (
                     <div className="text-sm text-gray-400">No discounts found.</div>
                 ) : (

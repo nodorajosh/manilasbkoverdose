@@ -32,11 +32,15 @@ export const authOptions: NextAuthOptions = {
                 await connectMongoose(); // ensure models accessible
                 const dbUser = await User.findOne({ email: user.email });
                 token.role = dbUser?.role ?? "user";
+                token.profileComplete = dbUser?.profileComplete ?? false;
             }
             return token;
         },
         async session({ session, token }) {
-            if (session.user) session.user.role = (token as any).role ?? "user"; // eslint-disable-line @typescript-eslint/no-explicit-any
+            if (session.user) {
+                session.user.role = (token as any).role ?? "user"; // eslint-disable-line @typescript-eslint/no-explicit-any
+                session.user.profileComplete = (token as any).profileComplete ?? false; // eslint-disable-line @typescript-eslint/no-explicit-any
+            }
             return session;
         },
     },

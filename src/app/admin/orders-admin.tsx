@@ -2,8 +2,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
+
 import ConfirmModal from "@/components/confirm-modal";
 import { useToast } from "@/components/toast-provider";
+import Spinner from "@/components/spinner";
 
 type OrderItem = {
     name: string;
@@ -13,7 +16,7 @@ type OrderItem = {
 
 type Order = {
     _id: string;
-    userEmail?: string;
+    userId?: string;
     totalAmount: number; // assumed already decimal number (not cents) as in your previous code
     currency: string;
     status: string;
@@ -108,62 +111,71 @@ export default function OrdersAdmin() {
             </div>
 
             {loading ? (
-                <div>Loading...</div>
+                <span className="flex items-center gap-3">
+                    <Spinner />
+                    <p className="ml-2 text-gray-400">Loading orders...</p>
+                </span>
             ) : orders.length === 0 ? (
                 <div className="text-sm text-gray-400">No orders found.</div>
             ) : (
                 <div className="space-y-4">
                     {orders.map((o) => (
-                        <div key={o._id} className="p-3 border rounded">
-                            <div className="flex flex-col md:flex-row md:justify-between">
-                                <div>
-                                    <div className="font-semibold">Order {o._id}</div>
-                                    <div className="text-sm text-gray-600">{o.userEmail}</div>
-                                    <div className="text-sm">
-                                        {(typeof o.totalAmount === "number" ? o.totalAmount.toFixed(2) : String(o.totalAmount))} {o.currency}
+                        <div key={o._id}>
+                            <Link
+                                href={`/orders/${o._id}`}
+                            >
+                                <div className="p-3 border rounded">
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                        <div>
+                                            <div className="font-semibold">Order {o._id}</div>
+                                            <div className="text-sm text-gray-300">{o.userId}</div>
+                                            <div className="text-sm">
+                                                {(typeof o.totalAmount === "number" ? o.totalAmount.toFixed(2) : String(o.totalAmount))} {o.currency}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 md:mt-0 text-sm text-right">
+                                            <div>Status: <strong>{o.status}</strong></div>
+                                            <div>{new Date(o.createdAt).toLocaleString()}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-3">
+                                        <div className="flex gap-2 flex-wrap">
+                                            <button
+                                                onClick={() => openConfirm(o, "paid")}
+                                                className="px-2 py-1 bg-blue-600 text-white rounded"
+                                                disabled={actionPending !== null}
+                                            >
+                                                {actionPending === o._id ? "Processing..." : "Mark paid"}
+                                            </button>
+                                            <button
+                                                onClick={() => openConfirm(o, "fulfilled")}
+                                                className="px-2 py-1 bg-green-600 text-white rounded"
+                                                disabled={actionPending !== null}
+                                            >
+                                                {actionPending === o._id ? "Processing..." : "Fulfill"}
+                                            </button>
+                                            <button
+                                                onClick={() => openConfirm(o, "cancelled")}
+                                                className="px-2 py-1 bg-gray-300 rounded"
+                                                disabled={actionPending !== null}
+                                            >
+                                                {actionPending === o._id ? "Processing..." : "Cancel"}
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-3 text-sm">
+                                            {o.items.map((it, idx) => (
+                                                <div key={idx} className="flex justify-between border-b py-1">
+                                                    <div>{it.name}</div>
+                                                    <div>x{it.quantity}</div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div className="mt-3 md:mt-0 text-sm text-right">
-                                    <div>Status: <strong>{o.status}</strong></div>
-                                    <div>{new Date(o.createdAt).toLocaleString()}</div>
-                                </div>
-                            </div>
-
-                            <div className="mt-3">
-                                <div className="flex gap-2 flex-wrap">
-                                    <button
-                                        onClick={() => openConfirm(o, "paid")}
-                                        className="px-2 py-1 bg-blue-600 text-white rounded"
-                                        disabled={actionPending !== null}
-                                    >
-                                        {actionPending === o._id ? "Processing..." : "Mark paid"}
-                                    </button>
-                                    <button
-                                        onClick={() => openConfirm(o, "fulfilled")}
-                                        className="px-2 py-1 bg-green-600 text-white rounded"
-                                        disabled={actionPending !== null}
-                                    >
-                                        {actionPending === o._id ? "Processing..." : "Fulfill"}
-                                    </button>
-                                    <button
-                                        onClick={() => openConfirm(o, "cancelled")}
-                                        className="px-2 py-1 bg-gray-300 rounded"
-                                        disabled={actionPending !== null}
-                                    >
-                                        {actionPending === o._id ? "Processing..." : "Cancel"}
-                                    </button>
-                                </div>
-
-                                <div className="mt-3 text-sm">
-                                    {o.items.map((it, idx) => (
-                                        <div key={idx} className="flex justify-between border-b py-1">
-                                            <div>{it.name}</div>
-                                            <div>x{it.quantity}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            </Link>
                         </div>
                     ))}
                 </div>
