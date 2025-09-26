@@ -108,50 +108,51 @@ export default function OrdersList() {
                 <>
                     <div className="space-y-4">
                         {orders.map((o) => (
-                            <div key={o._id}>
-                                <Link
-                                    href={`/orders/${o._id}`}
-                                >
-                                    <div className="p-3 border rounded bg-white/5">
-                                        <div className="flex justify-between">
-                                            <div>
-                                                <div className="font-semibold">Order {o._id}</div>
-                                                <div className="text-sm text-gray-400">{new Date(o.createdAt).toLocaleString()}</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-sm">Status: <strong>{o.status}</strong></div>
-                                                <div className="text-sm">${(o.totalAmount).toFixed(2)} {o.currency}</div>
-                                            </div>
-                                        </div>
 
-                                        <div className="mt-2 text-sm">
-                                            {o.items.map((it, idx) => (
-                                                <div key={idx} className="flex justify-between border-b py-1">
-                                                    <div>{it.name}</div>
-                                                    <div>x{it.quantity}</div>
-                                                </div>
-                                            ))}
-                                        </div>
+                            <div key={o._id} className="p-3 border rounded bg-white/5">
+                                <div>
+                                    <Link
+                                        href={`/orders/${o._id}`}
+                                        className="flex flex-col md:flex-row md:justify-between"
+                                    >
+                                        <div>
+                                            <div className="font-semibold">Order {o._id}</div>
+                                            <div className="text-sm text-gray-400">{new Date(o.createdAt).toLocaleString()}</div>
 
-                                        <div className="mt-3 flex gap-2">
-                                            {o.status === "pending" ? (
-                                                <button
-                                                    onClick={() => openCancelConfirm(o)}
-                                                    className="px-3 py-1 bg-red-600 text-white rounded"
-                                                    disabled={actionPending !== null}
-                                                    aria-disabled={actionPending !== null}
-                                                    title="Cancel this order"
-                                                >
-                                                    {actionPending === o._id ? "Cancelling..." : "Cancel order"}
-                                                </button>
-                                            ) : (
-                                                <button className="px-3 py-1 bg-gray-700 text-white rounded opacity-60 cursor-not-allowed" disabled>
-                                                    Cancel not available
-                                                </button>
-                                            )}
                                         </div>
-                                    </div>
-                                </Link>
+                                        <div className="text-right">
+                                            <div className="text-sm">Status: <strong>{o.status}</strong></div>
+                                            <div className="text-sm">${(o.totalAmount).toFixed(2)} {o.currency}</div>
+                                        </div>
+                                    </Link>
+                                </div>
+
+                                <div className="mt-2 text-sm">
+                                    {o.items.map((it, idx) => (
+                                        <div key={idx} className="flex justify-between border-b py-1">
+                                            <div>{it.name}</div>
+                                            <div>x{it.quantity}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-3 flex gap-2">
+                                    {o.status === "pending" ? (
+                                        <button
+                                            onClick={() => openCancelConfirm(o)}
+                                            className="px-3 py-1 bg-red-600 text-white rounded"
+                                            disabled={actionPending !== null}
+                                            aria-disabled={actionPending !== null}
+                                            title="Cancel this order"
+                                        >
+                                            {actionPending === o._id ? "Cancelling..." : "Cancel order"}
+                                        </button>
+                                    ) : (
+                                        <button className="px-3 py-1 bg-gray-700 text-white rounded opacity-60 cursor-not-allowed" disabled>
+                                            Cancel not available
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

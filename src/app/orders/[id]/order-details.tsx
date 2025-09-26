@@ -58,9 +58,12 @@ export default function OrderDetails({
     const [actionPending, setActionPending] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // confirm modal state
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [confirmAction, setConfirmAction] = useState<{ action: string; label?: string } | null>(null);
+    // confirmation modal state
+    const [confirm, setConfirm] = useState<{ open: boolean; order?: Order | null; action?: string | null }>({
+        open: false,
+        order: null,
+        action: null,
+    });
 
     // payment UI state
     const [paying, setPaying] = useState(false);
@@ -127,7 +130,7 @@ export default function OrderDetails({
             const res = await fetch("/api/admin/orders", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId, status }),
+                body: JSON.stringify({ _id: orderId, status }),
             });
             const payload = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(payload?.error || "Failed to update order");
@@ -140,8 +143,6 @@ export default function OrderDetails({
             toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
         } finally {
             setActionPending(false);
-            setConfirmOpen(false);
-            setConfirmAction(null);
         }
     }
 
@@ -151,7 +152,7 @@ export default function OrderDetails({
             const res = await fetch("/api/user/orders", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId, status: "cancelled" }),
+                body: JSON.stringify({ _id: orderId, status: "cancelled" }),
             });
             const payload = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(payload?.error || "Failed to cancel order");
@@ -163,24 +164,22 @@ export default function OrderDetails({
             toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
         } finally {
             setActionPending(false);
-            setConfirmOpen(false);
-            setConfirmAction(null);
+            setConfirm({ open: false, order: null, action: null });
         }
     }
 
     const onRequestAction = (action: string) => {
-        setConfirmAction({ action, label: action === "cancelled" ? "Cancel order" : `Set status: ${action}` });
-        setConfirmOpen(true);
+        setConfirm({ open: true, order, action });
     };
 
     const handleConfirm = async () => {
-        if (!confirmAction) return setConfirmOpen(false);
-        const act = confirmAction.action;
+        if (!confirm.action) return setConfirm({ open: false, order: null, action: null });
+        const act = confirm.action;
         if (isAdmin) {
             // admin allowed to set any status
             if (!ADMIN_STATUSES.includes(act as AdminStatus)) {
                 toast.push({ title: "Invalid", message: "Invalid status", level: "error" });
-                setConfirmOpen(false);
+                setConfirm({ open: false, order: null, action: null });
                 return;
             }
             await patchAdminStatus(act as AdminStatus);
@@ -188,7 +187,7 @@ export default function OrderDetails({
             // non-admin can only cancel
             if (act !== "cancelled") {
                 toast.push({ title: "Unauthorized", message: "You can only cancel orders", level: "error" });
-                setConfirmOpen(false);
+                setConfirm({ open: false, order: null, action: null });
                 return;
             }
             await patchUserCancel();
@@ -256,22 +255,21 @@ export default function OrderDetails({
         }
     };
 
-    if (loading) return (
-        <span className="w-full flex items-center justify-center">
-            <Spinner />
-            <p className="ml-2 text-gray-400">Loading order...</p>
-        </span>
-    );
-    if (!loading && error) return <div className="w-full flex items-center justify-center text-red-400">Error: {error}</div>;
-    if (!loading && !error && !order) return <div className="text-sm text-gray-400">Order not found.</div>;
-
     // Render
     return (
         <>
+            {loading && (
+                <span className="w-full flex items-center justify-center">
+                    <Spinner />
+                    <p className="ml-2 text-gray-400">Loading order...</p>
+                </span>
+            )}
+            {!loading && error && <div className="w-full flex items-center justify-center text-red-400">Error: {error}</div>}
+            {!loading && !error && !order && <div className="text-sm text-gray-400">Order not found.</div>}
             {!loading && !error && order && (
                 <div className="max-w-4xl mx-auto bg-white/5 p-6 rounded shadow">
-                    <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between mb-4">
+                        <div className="flex items-center justify-between md:justify-center gap-3">
                             <button
                                 onClick={handleBack}
                                 aria-label="Go back"
@@ -415,13 +413,13 @@ export default function OrderDetails({
 
                     {/* Confirm modal */}
                     <ConfirmModal
-                        open={confirmOpen}
-                        title={confirmAction?.label ?? "Confirm"}
-                        description={`Are you sure you want to ${confirmAction?.action === "cancelled" ? "cancel" : `set status to ${confirmAction?.action}`} for order ${order._id}?`}
-                        confirmLabel={confirmAction?.action === "cancelled" ? "Yes, cancel" : "Confirm"}
+                        open={confirm.open}
+                        title={confirm.action ?? "Confirm"}
+                        description={`Are you sure you want to ${confirm.action === "cancelled" ? "cancel" : `set status to ${confirm.action}`} for order ${order._id}?`}
+                        confirmLabel={confirm.action === "cancelled" ? "Yes, cancel" : "Confirm"}
                         cancelLabel="No, keep"
                         onConfirm={handleConfirm}
-                        onCancel={() => { setConfirmOpen(false); setConfirmAction(null); }}
+                        onCancel={() => { setConfirm({ open: false, order: null, action: null }); }}
                     />
                 </div>
             )}

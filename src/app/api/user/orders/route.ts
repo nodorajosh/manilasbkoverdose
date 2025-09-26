@@ -50,7 +50,7 @@ export async function PATCH(req: Request) {
         if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
         // ensure owner
-        if (String(order.customer?.email) !== session.user.email) {
+        if (String(order.userId) !== session.user.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
