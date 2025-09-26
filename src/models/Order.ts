@@ -1,26 +1,45 @@
+// models/Order.ts
 import { Schema, model, models } from "mongoose";
 
 const OrderItemSchema = new Schema({
     ticketId: { type: Schema.Types.ObjectId, ref: "Ticket", required: true },
     name: String,
-    price: Number, // store price at time of purchase in cents (integer)
+    price: Number, // store price at time of purchase (same unit you use in Ticket.price)
     currency: String,
-    quantity: Number
+    quantity: Number,
 });
 
-const OrderSchema = new Schema({
-    userId: { type: String, required: true }, // use email or user id
-    items: [OrderItemSchema],
-    totalAmount: { type: Number, required: true }, // cents
-    currency: { type: String, required: true }, // ISO code
-    status: { type: String, enum: ["pending", "paid", "failed", "cancelled"], default: "pending" },
-    wise: {
-        quoteId: String,
-        transferId: Number, // Wise transfer ids are integers
-        payInDetails: Schema.Types.Mixed // store whatever deposit details you get
+const PaymentDetailsSchema = new Schema(
+    {
+        method: { type: String }, // e.g. 'wise', 'stripe', etc.
+        paymentLink: { type: String, default: null },
+        depositInstructions: { type: String, default: null },
+        // you can add more fields here later (e.g. payinReference)
     },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-}, { timestamps: true });
+    { _id: false }
+);
+
+const WiseMetaSchema = new Schema(
+    {
+        quoteId: String,
+        transferId: Schema.Types.Mixed,
+        payInDetails: Schema.Types.Mixed,
+    },
+    { _id: false }
+);
+
+const OrderSchema = new Schema(
+    {
+        userId: { type: String, required: true },
+        userEmail: { type: String, required: false },
+        items: [OrderItemSchema],
+        totalAmount: { type: Number, required: true },
+        currency: { type: String, required: true },
+        status: { type: String, enum: ["pending", "paid", "failed", "cancelled"], default: "pending" },
+        paymentDetails: PaymentDetailsSchema,
+        wise: WiseMetaSchema,
+    },
+    { timestamps: true }
+);
 
 export default models.Order || model("Order", OrderSchema);

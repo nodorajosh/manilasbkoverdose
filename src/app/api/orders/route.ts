@@ -8,12 +8,6 @@ import { Ticket } from "@/models/Ticket";
 import Order from "@/models/Order";
 import { sendMail } from "@/lib/mailer";
 
-/**
- * Payload:
- * { ticketId: string, quantity?: number, paymentLink?: string|null, depositInstructions?: string|null }
- *
- * Creates an Order document with status "pending" and returns it.
- */
 const createOrderSchema = z.object({
     ticketId: z.string().min(1),
     quantity: z.number().int().min(1).optional().default(1),
@@ -23,7 +17,6 @@ const createOrderSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        // check session
         const session = await getServerSession(authOptions);
         if (!session?.user?.email) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -38,7 +31,6 @@ export async function POST(req: Request) {
 
         await connectMongoose();
 
-        // Find ticket
         const ticket = await Ticket.findById(ticketId);
         if (!ticket) {
             return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
@@ -52,7 +44,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining` }, { status: 400 });
         }
 
-        // Compose order item
         const item = {
             ticketId: ticket._id,
             name: ticket.name,
@@ -61,7 +52,6 @@ export async function POST(req: Request) {
             quantity,
         };
 
-        // Create order with status 'pending'
         const order = await Order.create({
             userId: session.user.email,
             userEmail: session.user.email,
@@ -76,25 +66,34 @@ export async function POST(req: Request) {
             },
         });
 
-        // Send "Order Created" email
-        await sendMail({
-            to: session.user.email,
-            subject: "Your order has been created",
-            html: `
-        <h1>Order Created</h1>
-        <p>Thank you, ${session.user.name ? session.user.name : session.user.email.split("@")[0]} for ordering <strong>${ticket.name}</strong>.</p>
-        <p>Status: <b>Pending</b></p>
-        <p>Please complete your payment using the Wise payment link provided.</p>
-        <br />
-        <br />
-        <p><a href="${paymentLink}">Pay with Wise</a></p>
-        ${depositInstructions ? `<h2>Deposit Instructions</h2><p>${depositInstructions}</p>` : ""}
-        <h2>Order Summary</h2>
-      `,
-        });
+        // Send "Order Created" email with link instructions (if present)
+        try {
+            const purchaserName = session.user.name ?? session.user.email.split("@")[0];
+            await sendMail({
+                to: session.user.email,
+                subject: "Your order has been created",
+                html: `
+          <h1>Order Created</h1>
+          <p>Thank you, ${purchaserName}, for ordering <strong>${ticket.name}</strong>.</p>
+          <p>Status: <b>Pending</b></p>
+          ${paymentLink ? `<p>Please complete your payment using the Wise link below:</p><p><a href="${paymentLink}">${paymentLink}</a></p>` : "<p>No payment link provided.</p>"}
+          ${depositInstructions ? `<h4>Deposit Instructions</h4><div>${depositInstructions}</div>` : ""}
+          <h4>Order summary</h4>
+          <ul>
+            <li>Order ID: ${order._id}</li>
+            <li>Ticket: ${ticket.name}</li>
+            <li>Quantity: ${quantity}</li>
+            <li>Total: ${(ticket.price * quantity)}</li>
+          </ul>
+        `,
+            });
+        } catch (mailErr) {
+            console.error("Order created but failed to send email:", mailErr);
+            // don't fail the request if email fails
+        }
 
         return NextResponse.json({ order });
-    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
         console.error("Create order error:", err?.response || err?.message || err);
         return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
     }

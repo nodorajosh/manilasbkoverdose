@@ -1,4 +1,3 @@
-// components/Main.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,11 +15,11 @@ type TicketType = {
     _id: string;
     name: string;
     description?: string;
-    price: number; // cents
-    currency: string; // e.g. "USD"
+    price: number;
+    currency: string;
     quantity: number;
     sold: number;
-    metadata?: Record<string, any> | any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    metadata?: Record<string, any> | any; //eslint-disable-line @typescript-eslint/no-explicit-any
     thumbnail?: {
         dataUrl: string;
         size: number;
@@ -58,7 +57,7 @@ export default function Main() {
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
     const [orderError, setOrderError] = useState<string | null>(null);
 
-    // Fetch tickets from API
+    // Fetch tickets
     useEffect(() => {
         let mounted = true;
         const fetchTickets = async () => {
@@ -69,7 +68,7 @@ export default function Main() {
                 const data = await res.json();
                 const list: TicketType[] = Array.isArray(data) ? data : data.tickets ?? data;
                 if (mounted) setTickets(list);
-            } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            } catch (e: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error(e);
                 if (mounted) setError(e?.message ?? "Failed to load");
             } finally {
@@ -136,7 +135,7 @@ export default function Main() {
             // Open the Wise link (in a new tab) so the user can see bank details
             if (paymentLink) {
                 // open in new tab; keep modal open so user sees order id/instructions
-                window.open(paymentLink, "_blank", "noopener,noreferrer");
+                window.open(paymentLink, "_blank");
             }
 
             setCreatingOrder(false);
@@ -169,18 +168,11 @@ export default function Main() {
                                 const remaining = Math.max(0, ticket.quantity - ticket.sold);
 
                                 return (
-                                    <div
-                                        key={ticket._id}
-                                        className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between"
-                                    >
+                                    <div key={ticket._id} className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between">
                                         <div>
                                             {ticket.thumbnail?.dataUrl ? (
                                                 <div className="mb-3 w-full flex justify-center">
-                                                    <img
-                                                        src={ticket.thumbnail.dataUrl}
-                                                        alt={`${ticket.name} thumbnail`}
-                                                        className="w-full aspect-video object-cover rounded-t-2xl"
-                                                    />
+                                                    <img src={ticket.thumbnail.dataUrl} alt={`${ticket.name} thumbnail`} className="w-full aspect-video object-cover rounded-t-2xl" />
                                                 </div>
                                             ) : null}
 
@@ -192,28 +184,20 @@ export default function Main() {
                                                 <div className="text-sm text-gray-400"> {ticket.currency}</div>
                                             </div>
 
-                                            <p className="px-4  text-sm text-gray-400 mt-1">{remaining} left</p>
+                                            <p className="px-4 text-sm text-gray-400 mt-1">{remaining} left</p>
                                         </div>
 
                                         <div className="mt-4 px-4 pb-4 flex flex-col gap-2">
-                                            <button
-                                                onClick={() => addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, 1)}
-                                                className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
-                                                disabled
-                                            >
+                                            <button onClick={() => addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, 1)} className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`} disabled>
                                                 <h3>Add to Cart</h3>
                                             </button>
 
                                             {ticket.wise?.enabled && ticket.wise?.paymentLink ? (
                                                 <>
-
                                                     {session?.user ? (
                                                         <>
                                                             {session?.user.profileComplete ? (
-                                                                <button
-                                                                    onClick={() => openWiseModal(ticket)}
-                                                                    className="mt-2 flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
-                                                                >
+                                                                <button onClick={() => openWiseModal(ticket)} className="mt-2 flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95">
                                                                     <span>Buy with</span>
                                                                     <Image src={WI} alt="wise" width={20} height={20} />
                                                                     <span>Wise</span>
@@ -226,7 +210,6 @@ export default function Main() {
                                                                 </Link>
                                                             )}
                                                         </>
-
                                                     ) : (
                                                         <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
                                                             <span>Sign in to buy with</span>
@@ -247,16 +230,8 @@ export default function Main() {
 
             {/* Wise deposit modal */}
             {showWiseModal && wiseModalData && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-                    onClick={closeWiseModal}
-                >
-                    <div
-                        className="bg-white text-black rounded-lg max-w-xl w-full p-6"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeWiseModal}>
+                    <div className="bg-white text-black rounded-lg max-w-xl w-full p-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-start justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold">Pay with Wise — {wiseModalData.name}</h3>
@@ -279,21 +254,11 @@ export default function Main() {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-3">
                                         {createdOrderId ? (
-                                            <a
-                                                href={wiseModalData.paymentLink}
-                                                className="inline-block mt-2 cta cta-solid text-black text-center px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
-                                                target="_blank"
-                                            >
+                                            <a href={wiseModalData.paymentLink} className="inline-block mt-2 cta cta-solid text-black text-center px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95" target="_blank" rel="noopener noreferrer">
                                                 Open Wise Payment Details
                                             </a>
                                         ) : (
-                                            <button
-                                                onClick={() =>
-                                                    createOrderAndOpenWise(wiseModalData.ticketId, wiseModalData.paymentLink, wiseModalData.instructions)
-                                                }
-                                                disabled={creatingOrder}
-                                                className="inline-block mt-2 cta cta-solid text-black px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
-                                            >
+                                            <button onClick={() => createOrderAndOpenWise(wiseModalData.ticketId, wiseModalData.paymentLink, wiseModalData.instructions)} disabled={creatingOrder} className="inline-block mt-2 cta cta-solid text-black px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95">
                                                 {creatingOrder ? "Creating order..." : "Open Wise Payment Details"}
                                             </button>
                                         )}
@@ -308,14 +273,16 @@ export default function Main() {
                                     {orderError && <div className="text-sm text-red-600">{orderError}</div>}
 
                                     {/* helper link in case the new tab was blocked */}
-                                    <div className="text-xs text-gray-600">
-                                        If the Wise page did not open automatically, copy & paste this link into a new tab:
-                                        <div className="mt-1 break-all">
-                                            <a href={wiseModalData.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                                                {wiseModalData.paymentLink}
-                                            </a>
+                                    {createdOrderId && (
+                                        <div className="text-xs text-gray-600">
+                                            If the Wise page did not open automatically, copy & paste this link into a new tab:
+                                            <div className="mt-1 break-all">
+                                                <a href={wiseModalData.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                                                    {wiseModalData.paymentLink}
+                                                </a>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             ) : null}
                         </div>

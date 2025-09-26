@@ -2,6 +2,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { useToast } from "@/components/toast-provider";
 import Spinner from "@/components/spinner";
 
@@ -243,6 +245,8 @@ const COUNTRY_CODES: { name: string; iso2: string; dial_code: string }[] = [
 ];
 
 export default function ProfileForm() {
+    const router = useRouter();
+
     const toast = useToast();
 
     const [loading, setLoading] = useState(false);
@@ -348,6 +352,7 @@ export default function ProfileForm() {
             }
             toast.push({ title: "Saved", message: "Profile updated", level: "success" });
             // if privacy modal still open and user accepted, we mark it accepted
+            router.refresh(); // refresh data on page
         } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
             console.error("Profile save error:", err);
             toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
@@ -499,8 +504,16 @@ export default function ProfileForm() {
                             <p><strong>Storage:</strong> Your data is stored securely in our database. Photos are stored as base64 in the database for now — we recommend migrating to object storage (S3) in production.</p>
                             <p><strong>Sharing:</strong> We never sell your data. We may share necessary details with payment processors (Stripe/Wise/PayPal) to complete your transaction.</p>
                             <p><strong>Retention:</strong> We retain order and billing data for accounting and legal compliance. You can request deletion by contacting support.</p>
-                            <p><strong>Your rights:</strong> You can view and update your profile on this page. To remove your data, contact the team at support@yourdomain.test.</p>
-                            <p className="text-xs text-gray-500">This is a short summary. For full privacy policy see the Privacy & Terms page (link in footer).</p>
+                            <p>
+                                <strong>
+                                    Your rights:
+                                </strong>
+                                &nbsp;You can view and update your profile on this page. To remove your data, contact the team at&nbsp;
+                                <a href="mailto:manilasbkzoverdose@gmail.com" className="underline text-blue-500 hover:text-blue-600">
+                                    manilasbkzoverdose@gmail.com
+                                </a>
+                            </p>
+                            {/* <p className="text-xs text-gray-500">This is a short summary. For full privacy policy see the Privacy & Terms page (link in footer).</p> */}
                         </div>
 
                         <div className="mt-6 flex justify-end gap-2">

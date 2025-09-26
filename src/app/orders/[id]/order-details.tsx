@@ -2,16 +2,23 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { useToast } from "@/components/toast-provider";
 import ConfirmModal from "@/components/confirm-modal";
 import Spinner from "@/components/spinner";
 
 type OrderItem = {
-    ticketId?: any; //eslint-disable-line @typescript-eslint/no-explicit-any
+    ticketId?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     name: string;
     quantity: number;
     price?: number;
+};
+
+type PaymentDetails = {
+    method?: string | null;
+    paymentLink?: string | null;
+    depositInstructions?: string | null;
 };
 
 type Order = {
@@ -22,12 +29,12 @@ type Order = {
     items: OrderItem[];
     createdAt?: string;
     updatedAt?: string;
-    customer?: {
-        name?: string;
-        email?: string;
-    } | null;
+    customer?: { name?: string; email?: string } | null;
+    userId?: string | null;
+    userEmail?: string | null;
+    paymentDetails?: PaymentDetails | null;
     // other fields allowed
-    [k: string]: any; //eslint-disable-line @typescript-eslint/no-explicit-any
+    [k: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
 const ADMIN_STATUSES = ["pending", "paid", "cancelled", "refunded", "fulfilled"] as const;
@@ -43,6 +50,9 @@ export default function OrderDetails({
     currentEmail: string;
 }) {
     const toast = useToast();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionPending, setActionPending] = useState(false);
@@ -51,6 +61,10 @@ export default function OrderDetails({
     // confirm modal state
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState<{ action: string; label?: string } | null>(null);
+
+    // payment UI state
+    const [paying, setPaying] = useState(false);
+    const [paymentBlocked, setPaymentBlocked] = useState(false);
 
     const isAdmin = role === "admin";
 
@@ -90,7 +104,7 @@ export default function OrderDetails({
         if (!order) return false;
         if (isAdmin) return true; // admin can do everything
         // For non-admins, allow cancel only if the order belongs to currentEmail and status is pending
-        const belongsToUser = order.customer?.email ? order.customer.email === currentEmail : false;
+        const belongsToUser = order.customer?.email ? order.customer.email === currentEmail : (order.userEmail ?? order.userId) === currentEmail;
         return belongsToUser && order.status === "pending";
     }, [order, isAdmin, currentEmail]);
 
@@ -181,32 +195,104 @@ export default function OrderDetails({
         }
     };
 
-    if (loading) return <div>Loading order…</div>;
-    if (error) return <div className="text-red-400">{error}</div>;
-    if (!order) return <div className="text-sm text-gray-400">Order not found.</div>;
+    // Back button handler:
+    const handleBack = () => {
+        // Prefer history.back() when there's navigation history
+        if (typeof window !== "undefined") {
+            if (window.history.length > 1) {
+                router.back();
+                return;
+            }
+        }
 
+        // Next try a `from` search param (e.g. ?from=/some/path)
+        const from = searchParams?.get?.("from");
+        if (from) {
+            router.push(from);
+            return;
+        }
+
+        // Fallback: safe default page
+        router.push("/user");
+    };
+
+    // Safe open payment link: opens about:blank synchronously then navigates
+    const openPaymentLinkSafe = (link?: string | null) => {
+        if (!link) {
+            toast.push({ title: "No link", message: "No payment link available for this order.", level: "error" });
+            return;
+        }
+
+        // open blank synchronously to avoid popup blockers
+        let win: Window | null = null;
+        try {
+            win = window.open("about:blank", "_blank");
+            if (!win) {
+                setPaymentBlocked(true);
+                toast.push({ title: "Popup blocked", message: "Popup blocked. Please copy the payment link below.", level: "warning" });
+                return;
+            }
+            try { (win as any).opener = null; } catch { } //eslint-disable-line @typescript-eslint/no-explicit-any
+            // navigate
+            win.location.href = link;
+            setPaymentBlocked(false);
+        } catch (err) {
+            console.error("openPaymentLinkSafe error:", err);
+            setPaymentBlocked(true);
+            toast.push({ title: "Payment open failed", message: "Couldn't open payment link automatically. Please copy the link below.", level: "warning" });
+            try { win?.close(); } catch { }
+        }
+    };
+
+    // convenience: copy payment link to clipboard
+    const copyPaymentLink = async (link?: string | null) => {
+        if (!link) return;
+        try {
+            await navigator.clipboard.writeText(link);
+            toast.push({ title: "Copied", message: "Payment link copied to clipboard", level: "success" });
+        } catch (err) {
+            console.error("copy failed", err);
+            toast.push({ title: "Failed", message: "Couldn't copy link — please copy manually", level: "error" });
+        }
+    };
+
+    if (loading) return (
+        <span className="w-full flex items-center justify-center">
+            <Spinner />
+            <p className="ml-2 text-gray-400">Loading order...</p>
+        </span>
+    );
+    if (!loading && error) return <div className="w-full flex items-center justify-center text-red-400">Error: {error}</div>;
+    if (!loading && !error && !order) return <div className="text-sm text-gray-400">Order not found.</div>;
+
+    // Render
     return (
         <>
-            {loading && (
-                <span className="flex items-center gap-3">
-                    <Spinner />
-                    <p className="ml-2 text-gray-400">Loading orders...</p>
-                </span>
-            )}
-            {!loading && error && (
-                <div className="text-red-400">Error: {error}</div>
-            )}
             {!loading && !error && order && (
                 <div className="max-w-4xl mx-auto bg-white/5 p-6 rounded shadow">
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <div className="text-lg font-semibold">Order {order._id}</div>
-                            <div className="text-sm text-gray-400">{new Date(order.createdAt ?? "").toLocaleString()}</div>
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleBack}
+                                aria-label="Go back"
+                                className="p-2 rounded hover:bg-white/5"
+                            >
+                                {/* simple left arrow */}
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                                    <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0L3.586 10l4.707-4.707a1 1 0 011.414 1.414L6.414 10l3.293 3.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                                    <path d="M13 10a1 1 0 11-2 0 1 1 0 012 0z" />
+                                </svg>
+                            </button>
+
+                            <div>
+                                <div className="text-lg font-semibold">Order {order._id}</div>
+                                <div className="text-sm text-gray-400">{new Date(order.createdAt ?? "").toLocaleString()}</div>
+                            </div>
                         </div>
 
                         <div className="text-right">
                             <div className="text-sm">Status: <strong>{order.status}</strong></div>
-                            <div className="text-sm">{order.userId ?? ""}</div>
+                            <div className="text-sm">{order.userEmail ?? order.userId ?? ""}</div>
                         </div>
                     </div>
 
@@ -244,6 +330,34 @@ export default function OrderDetails({
                         </div>
 
                         <div className="flex gap-2">
+                            {/* Payment / admin controls */}
+                            {order.paymentDetails?.paymentLink && order.status === "pending" && (
+                                <>
+                                    {/* If user is owner or admin show pay button */}
+                                    {isAdmin || ((order.customer?.email ?? order.userEmail ?? order.userId) === currentEmail) ? (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setPaying(true);
+                                                    openPaymentLinkSafe(order.paymentDetails?.paymentLink);
+                                                    // small delay to keep button disabled briefly
+                                                    setTimeout(() => setPaying(false), 1200);
+                                                }}
+                                                disabled={paying}
+                                                className="px-3 py-1 bg-yellow-500 text-black rounded"
+                                                title="Open payment link in new tab"
+                                            >
+                                                {paying ? "Opening..." : `Open Payment Details (${order.paymentDetails?.method ?? "pay"})`}
+                                            </button>
+
+                                            <button onClick={() => copyPaymentLink(order.paymentDetails?.paymentLink)} className="px-3 py-1 bg-gray-700 text-white rounded">
+                                                Copy Link
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                </>
+                            )}
+
                             {isAdmin ? (
                                 <>
                                     <select
@@ -256,13 +370,7 @@ export default function OrderDetails({
                                         <option value="">Set status...</option>
                                         {ADMIN_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                                     </select>
-                                    <button
-                                        onClick={() => fetchOrder()}
-                                        className="px-3 py-1 bg-gray-700 text-white rounded"
-                                        disabled={actionPending}
-                                    >
-                                        Refresh
-                                    </button>
+                                    <button onClick={() => fetchOrder()} className="px-3 py-1 bg-gray-700 text-white rounded" disabled={actionPending}>Refresh</button>
                                 </>
                             ) : (
                                 <>
@@ -274,13 +382,29 @@ export default function OrderDetails({
                                     >
                                         {actionPending ? "Processing..." : "Cancel Order"}
                                     </button>
-                                    <button onClick={() => fetchOrder()} className="px-3 py-1 bg-gray-700 text-white rounded" disabled={actionPending}>
-                                        Refresh
-                                    </button>
+                                    <button onClick={() => fetchOrder()} className="px-3 py-1 bg-gray-700 text-white rounded" disabled={actionPending}>Refresh</button>
                                 </>
                             )}
                         </div>
                     </div>
+
+                    {/* payment instructions */}
+                    {order.paymentDetails?.depositInstructions ? (
+                        <div className="mt-4 bg-white/5 p-4 rounded">
+                            <h4 className="font-semibold">Deposit instructions</h4>
+                            <div className="text-sm text-gray-200 whitespace-pre-wrap">{order.paymentDetails.depositInstructions}</div>
+                        </div>
+                    ) : null}
+
+                    {/* helper UI if payment was blocked */}
+                    {paymentBlocked && order.paymentDetails?.paymentLink ? (
+                        <div className="mt-3 p-3 bg-yellow-50 text-yellow-900 rounded">
+                            The payment window may have been blocked by your browser. <button className="underline ml-1" onClick={() => copyPaymentLink(order.paymentDetails?.paymentLink)}>Copy link</button> or open it manually:
+                            <div className="mt-2 break-all">
+                                <a href={order.paymentDetails.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{order.paymentDetails.paymentLink}</a>
+                            </div>
+                        </div>
+                    ) : null}
 
                     {/* audit / meta */}
                     <div className="mt-4 text-xs text-gray-400">
@@ -300,9 +424,6 @@ export default function OrderDetails({
                         onCancel={() => { setConfirmOpen(false); setConfirmAction(null); }}
                     />
                 </div>
-            )}
-            {!loading && !error && !order && (
-                <div className="text-sm text-gray-400">Order not found.</div>
             )}
         </>
     );

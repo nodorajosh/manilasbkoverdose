@@ -9,10 +9,11 @@ import { connectMongoose } from "./mongoose";
 
 /**
  * authOptions for NextAuth
- * - Includes jwt/session callbacks that attach role & profileComplete
- * - Includes events.createUser to seed role
- * - Includes a signIn callback that repairs a missing `accounts` doc when an OAuth provider
- *   signs in with an email that already exists in your users collection.
+ *
+ * - Keeps your signIn repair callback (recreates accounts entry if missing).
+ * - jwt callback now refreshes role & profileComplete from DB on every invocation,
+ *   so changes to the user record (e.g. profileComplete = true) are reflected
+ *   without forcing a full re-login.
  */
 export const authOptions: NextAuthOptions = {
     adapter: MongoDBAdapter(clientPromise),
@@ -33,16 +34,14 @@ export const authOptions: NextAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     callbacks: {
         /**
-         * signIn - runs on every sign-in attempt (OAuth & Email).
-         * We attempt a best-effort repair of the `accounts` collection if it was dropped.
-         * This is safe for verified provider emails (Google).
+         * signIn - repair missing accounts doc if necessary (non-destructive)
          */
         async signIn({ user, account }) {
             try {
                 // Only handle OAuth-ish providers where providerAccountId exists
                 if (!account?.provider || !account?.providerAccountId) return true;
 
-                // Determine provider email (user.email or email?.value)
+                // Determine provider email (user.email or null)
                 const providerEmail = user?.email ?? null;
                 if (!providerEmail) return true;
 
@@ -72,11 +71,11 @@ export const authOptions: NextAuthOptions = {
                     // Insert a minimal adapter-compatible accounts document linking to the user
                     // The adapter uses at least: provider, type, providerAccountId, userId
                     // Add token fields if present (helpful but not required).
-                    const doc: any = { //eslint-disable-line @typescript-eslint/no-explicit-any
+                    const doc: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
                         provider: account.provider,
                         type: account.type ?? "oauth",
                         providerAccountId,
-                        userId: existingUser._id, // keep as ObjectId if present
+                        userId: existingUser._id,
                         access_token: account?.access_token ?? null,
                         expires_at: account?.expires_at ?? null,
                         scope: account?.scope ?? null,
@@ -96,18 +95,69 @@ export const authOptions: NextAuthOptions = {
             }
         },
 
-        // attach role & profileComplete into the JWT (so middleware and server can read it)
+        /**
+         * jwt - refresh role & profileComplete from DB whenever possible.
+         * This ensures session claims reflect DB updates (e.g. profileComplete toggled).
+         */
         async jwt({ token, user }) {
-            if (user?.email) {
-                await connectMongoose(); // ensure models accessible
-                const dbUser = await User.findOne({ email: user.email });
-                token.role = dbUser?.role ?? "user";
-                token.profileComplete = dbUser?.profileComplete ?? false;
+            try {
+                // Ensure mongoose connection and User model available when we need DB lookups
+                // We'll only call connect when necessary to avoid overhead on every invocation
+                // but it's safe to call (connectMongoose handles pooling).
+                // If `user` is present it's a sign-in / create event: read DB by email
+                if (user?.email) {
+                    await connectMongoose();
+                    const dbUser = await User.findOne({ email: user.email }).lean();
+                    if (dbUser) {
+                        (token as any).role = dbUser.role ?? "user"; // eslint-disable-line @typescript-eslint/no-explicit-any
+                        (token as any).profileComplete = Boolean(dbUser.profileComplete ?? false); // eslint-disable-line @typescript-eslint/no-explicit-any
+                    } else {
+                        (token as any).role = (token as any).role ?? "user"; // eslint-disable-line @typescript-eslint/no-explicit-any
+                        (token as any).profileComplete = (token as any).profileComplete ?? false; // eslint-disable-line @typescript-eslint/no-explicit-any
+                    }
+                    return token;
+                }
+
+                // Subsequent invocations (no `user`): try to refresh from DB using token.sub or token.email
+                const identifier = (token as any).sub ?? (token as any).email ?? null; // eslint-disable-line @typescript-eslint/no-explicit-any
+                if (!identifier) return token;
+
+                try {
+                    await connectMongoose();
+                    let dbUser = null;
+
+                    // Prefer findById when token.sub is available (it is often the user id)
+                    if ((token as any).sub) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                        try {
+                            dbUser = await User.findById((token as any).sub).lean(); // eslint-disable-line @typescript-eslint/no-explicit-any
+                        } catch (e) {
+                            // if findById fails for any reason, fallback to email lookup
+                            dbUser = null;
+                            console.log(e)
+                        }
+                    }
+
+                    if (!dbUser && (token as any).email) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                        dbUser = await User.findOne({ email: (token as any).email }).lean(); // eslint-disable-line @typescript-eslint/no-explicit-any
+                    }
+
+                    if (dbUser) {
+                        (token as any).role = dbUser.role ?? (token as any).role ?? "user"; // eslint-disable-line @typescript-eslint/no-explicit-any
+                        (token as any).profileComplete = Boolean(dbUser.profileComplete ?? (token as any).profileComplete ?? false); // eslint-disable-line @typescript-eslint/no-explicit-any
+                    }
+                } catch (dbErr) {
+                    console.error("jwt callback DB refresh error:", dbErr);
+                    // swallow DB errors and return existing token so auth doesn't break
+                }
+            } catch (err) {
+                console.error("jwt callback error:", err);
             }
             return token;
         },
 
-        // expose role & profileComplete on session.user
+        /**
+         * session - expose role & profileComplete to client session
+         */
         async session({ session, token }) {
             if (session.user) {
                 (session.user as any).role = (token as any).role ?? "user"; // eslint-disable-line @typescript-eslint/no-explicit-any

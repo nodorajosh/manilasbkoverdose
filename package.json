@@ -7,7 +7,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "update-orders-payment-link": "ts-node src/scripts/update-orders-payment-link.ts"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.10.0",
