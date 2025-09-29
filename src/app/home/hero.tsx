@@ -44,7 +44,7 @@ export default function Hero() {
                 style={{ ...styles, backgroundImage: `url(${HeroOverlay.src})` }}
             >
                 <div className="text-center font-header h-[20rem] flex flex-wrap content-end justify-center">
-                    <Link href="/tickets" className="px-6 cta rounded pointer-events-none" aira-disabled="true" tabIndex={-1}>
+                    <Link href="/tickets" className="px-6 cta rounded>
                         <span className="h3 text-[1.2rem]">Get Your Tickets Now</span>
                     </Link>
                 </div>

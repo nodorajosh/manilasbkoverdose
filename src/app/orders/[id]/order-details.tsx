@@ -76,7 +76,7 @@ export default function OrderDetails({
         setError(null);
         try {
             // Admins fetch all admin orders and pick the one; users fetch only their orders
-            const url = `/api/user/orders/${orderId}`;
+            const url = `/api/user/orders/order/${orderId}`;
             const res = await fetch(url, { cache: "no-store" });
             if (!res.ok) {
                 const payload = await res.json().catch(() => ({}));

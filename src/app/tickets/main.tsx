@@ -172,7 +172,7 @@ export default function Main() {
                                         <div>
                                             {ticket.thumbnail?.dataUrl ? (
                                                 <div className="mb-3 w-full flex justify-center">
-                                                    <img src={ticket.thumbnail.dataUrl} alt={`${ticket.name} thumbnail`} className="w-full aspect-video object-cover rounded-t-2xl" />
+                                                    <Image src={ticket.thumbnail.dataUrl} alt={`${ticket.name} thumbnail`} width={1920} height={1080} className="w-full aspect-video object-cover rounded-t-2xl" />
                                                 </div>
                                             ) : null}
 

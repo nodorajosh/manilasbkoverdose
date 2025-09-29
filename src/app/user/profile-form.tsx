@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 
 import { useToast } from "@/components/toast-provider";
 import Spinner from "@/components/spinner";
@@ -247,6 +248,8 @@ const COUNTRY_CODES: { name: string; iso2: string; dial_code: string }[] = [
 export default function ProfileForm() {
     const router = useRouter();
 
+    const { id } = useParams();
+
     const toast = useToast();
 
     const [loading, setLoading] = useState(false);
@@ -275,7 +278,7 @@ export default function ProfileForm() {
     const load = async () => {
         setInitialLoading(true);
         try {
-            const res = await fetch("/api/user/profile");
+            const res = await fetch(id ? `/api/user/profile/${id}` : "/api/user/profile");
             if (!res.ok) throw new Error("Failed to load profile");
             const data = await res.json();
             const u = data.user;
@@ -339,7 +342,7 @@ export default function ProfileForm() {
                 address,
                 image,
             };
-            const res = await fetch("/api/user/profile", {
+            const res = await fetch(id ? `/api/user/profile/${id}` : "/api/user/profile", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -395,11 +398,11 @@ export default function ProfileForm() {
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-sm">First name</label>
-                                <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="border p-2 w-full" />
+                                <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="border p-2 w-full" readOnly={!!id} />
                             </div>
                             <div>
                                 <label className="block text-sm">Last name</label>
-                                <input value={lastName} onChange={(e) => setLastName(e.target.value)} required className="border p-2 w-full" />
+                                <input value={lastName} onChange={(e) => setLastName(e.target.value)} required className="border p-2 w-full" readOnly={!!id} />
                             </div>
                         </div>
 
@@ -432,51 +435,53 @@ export default function ProfileForm() {
                                     className="border p-2 w-full"
                                     placeholder="e.g. 912345678"
                                     inputMode="tel"
-                                />
+                                    readOnly={!!id} />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-sm">Date of Birth</label>
-                                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} required className="border p-2 w-full" />
+                                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} required className="border p-2 w-full" readOnly={!!id} />
                             </div>
                             <div>
                                 <label className="block text-sm">Profile photo (optional, ≤ 500KB)</label>
-                                <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
-                                {image && <div className="mt-2"><img src={image} alt="profile" className="w-24 h-24 object-cover rounded" /></div>}
+                                <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0] ?? null)} readOnly={!!id} />
+                                {image && <div className="mt-2"><Image src={image} alt="profile" width={500} height={500} className="w-24 h-24 object-cover rounded" /></div>}
                             </div>
                         </div>
 
                         <div>
                             <label className="block text-sm">Address line 1</label>
-                            <input value={address.line1} onChange={(e) => setAddress({ ...address, line1: e.target.value })} required className="border p-2 w-full" />
+                            <input value={address.line1} onChange={(e) => setAddress({ ...address, line1: e.target.value })} required className="border p-2 w-full" readOnly={!!id} />
                         </div>
 
                         <div className="grid grid-cols-3 gap-3">
                             <div>
                                 <label className="block text-sm">City</label>
-                                <input value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} required className="border p-2 w-full" />
+                                <input value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} required className="border p-2 w-full" readOnly={!!id} />
                             </div>
                             <div>
                                 <label className="block text-sm">State</label>
-                                <input value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} required className="border p-2 w-full" />
+                                <input value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} required className="border p-2 w-full" readOnly={!!id} />
                             </div>
                             <div>
                                 <label className="block text-sm">ZIP</label>
-                                <input value={address.zip} onChange={(e) => setAddress({ ...address, zip: e.target.value })} required className="border p-2 w-full" />
+                                <input value={address.zip} onChange={(e) => setAddress({ ...address, zip: e.target.value })} required className="border p-2 w-full" readOnly={!!id} />
                             </div>
                         </div>
 
                         <div>
                             <label className="block text-sm">Country</label>
-                            <input value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })} required className="border p-2 w-full" />
+                            <input value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })} required className="border p-2 w-full" readOnly={!!id} />
                         </div>
 
                         <div className="flex gap-2 justify-end mt-4 items-center">
-                            <button type="submit" disabled={loading} className="px-3 py-1 bg-blue-600 text-white rounded">
-                                {loading ? "Saving..." : "Save profile"}
-                            </button>
+                            {!id && (
+                                <button type="submit" disabled={loading} className="px-3 py-1 bg-blue-600 text-white rounded">
+                                    {loading ? "Saving..." : "Save profile"}
+                                </button>
+                            )}
                         </div>
                     </form>
                 </>

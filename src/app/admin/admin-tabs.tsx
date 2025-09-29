@@ -6,11 +6,13 @@ import React, { useEffect, useRef, useState } from "react";
 import TicketsAdmin from "./tickets-admin";
 import DiscountsAdmin from "./discounts-admin";
 import OrdersAdmin from "./orders-admin";
+import UsersAdmin from "./users-admin";
 
-type TabId = "orders" | "tickets" | "discounts";
+type TabId = "orders" | "users" | "tickets" | "discounts";
 
 const TABS: { id: TabId; title: string; desc?: string }[] = [
     { id: "orders", title: "Manage Orders", desc: "View orders and update statuses" },
+    { id: "users", title: "Manage Users", desc: "View users" },
     { id: "tickets", title: "Tickets", desc: "List, edit, archive and create tickets" },
     { id: "discounts", title: "Create Discount", desc: "Create promo codes and limits" },
 ];
@@ -20,6 +22,7 @@ export default function AdminTabs() {
     const tabsRef = useRef<Array<HTMLButtonElement | null>>([]);
     const panelsRef = useRef<Record<TabId, HTMLDivElement | null>>({
         orders: null,
+        users: null,
         tickets: null,
         discounts: null,
     });
@@ -80,6 +83,16 @@ export default function AdminTabs() {
                             <p className="text-sm text-white/70">View incoming orders, update statuses and fulfill.</p>
                         </div>
                         <OrdersAdmin />
+
+                    </div>
+
+                    {/* Users */}
+                    <div id="panel-users" role="tabpanel" aria-labelledby="tab-users" tabIndex={-1} ref={(el) => { panelsRef.current.users = el }} hidden={active !== "users"} className={`${active === "users" ? "block" : "hidden"} p-4`}>
+                        <div className="mb-4">
+                            <h2 className="text-xl font-semibold">Manage Users</h2>
+                            <p className="text-sm text-white/70">View users.</p>
+                            <UsersAdmin />
+                        </div>
 
                     </div>
 

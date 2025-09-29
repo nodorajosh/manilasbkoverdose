@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 import { useToast } from "@/components/toast-provider";
 import ConfirmModal from "@/components/confirm-modal";
@@ -19,6 +20,8 @@ type Order = {
 };
 
 export default function OrdersList() {
+    const { id } = useParams();
+
     const toast = useToast();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,7 +39,7 @@ export default function OrdersList() {
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/user/orders");
+            const res = await fetch(id ? `/api/user/orders/${id}` : "/api/user/orders");
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
                 throw new Error(err?.error || "Failed to fetch orders");
@@ -66,7 +69,7 @@ export default function OrdersList() {
     const performUpdate = async (orderId: string, status: string) => {
         setActionPending(orderId);
         try {
-            const res = await fetch("/api/user/orders", {
+            const res = await fetch(id ? `/api/user/orders/${id}` : "/api/user/orders", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ orderId, status }),

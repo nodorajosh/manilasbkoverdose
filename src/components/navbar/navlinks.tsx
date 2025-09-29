@@ -65,9 +65,9 @@ export default function Navlinks() {
                 </li>
             ))}
             <li className="w-[70px] md:w-[120px] lg:w-[140px] xl:w-[180px] grid place-items-center">
-                <a href="/tickets" className="px-3 cta cta-solid rounded w-full grid place-items-center">
+                <Link href="/tickets" className="px-3 cta cta-solid rounded w-full grid place-items-center">
                     <span className="h3">Tickets</span>
-                </a>
+                </Link>
             </li>
 
             {/* User avatar if logged in */}
