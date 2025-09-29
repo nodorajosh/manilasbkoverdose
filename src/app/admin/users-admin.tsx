@@ -32,7 +32,7 @@ export default function UsersAdmin() {
             const payload = await res.json();
             if (!res.ok) throw new Error(payload?.error || "Failed to load users");
             setUsers(payload.users ?? []);
-        } catch (err: any) {
+        } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
             console.error("fetchUsers error:", err);
             setError(err?.message ?? String(err));
             toast.push({ title: "Error", message: "Failed to load users", level: "error" });

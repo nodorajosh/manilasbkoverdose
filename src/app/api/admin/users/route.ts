@@ -19,7 +19,7 @@ export type PublicUser = {
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "admin") {
+        if (!session?.user || (session.user as any).role !== "admin") { //eslint-disable-line @typescript-eslint/no-explicit-any
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
@@ -29,7 +29,7 @@ export async function GET() {
             .select("name firstName lastName email image role profileComplete createdAt updatedAt")
             .lean();
 
-        const safeUsers: PublicUser[] = users.map((u: any) => ({
+        const safeUsers: PublicUser[] = users.map((u: any) => ({ //eslint-disable-line @typescript-eslint/no-explicit-any
             _id: String(u._id),
             name: u.firstName ? `${u.firstName.trim()} ${u.lastName || ""}`.trim() : u.name ?? null,
             email: u.email,
