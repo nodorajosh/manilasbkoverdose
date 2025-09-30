@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 import { useToast } from "@/components/toast-provider";
 import Spinner from "@/components/spinner";
@@ -518,7 +519,7 @@ export default function ProfileForm() {
                                     manilasbkzoverdose@gmail.com
                                 </a>
                             </p>
-                            {/* <p className="text-xs text-gray-500">This is a short summary. For full privacy policy see the Privacy & Terms page (link in footer).</p> */}
+                            <p className="text-xs text-gray-500">This is a short summary. For full privacy policy see the <Link href="/terms">Terms Page</Link>.</p>
                         </div>
 
                         <div className="mt-6 flex justify-end gap-2">
