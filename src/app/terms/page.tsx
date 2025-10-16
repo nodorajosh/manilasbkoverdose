@@ -92,16 +92,10 @@ export default function TermsPage() {
             <section>
                 <h2>Refunds, Cancellations & Transfers</h2>
                 <p>
-                    <strong>General policy:</strong> Tickets are refundable only as set
-                    out below. If an event is canceled by the organizers, we will provide
+                    <strong>General policy:</strong> Tickets are non-refundable.
+                    If an event is canceled by the organizers, we will provide
                     a refund or equivalent credit. Refunds may be subject to a processing
                     fee to cover payment fees and administrative costs.
-                </p>
-                <p>
-                    <strong>Standard ticket refund window:</strong>{" "}
-                    Tickets for in-person events purchased more than 14 days before the
-                    event are eligible for a refund minus a 10% processing fee. Tickets
-                    purchased 14 days or less before the event are non-refundable.
                 </p>
                 <p>
                     <strong>Transfers:</strong> Tickets are transferable unless explicitly

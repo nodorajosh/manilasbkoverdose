@@ -91,7 +91,6 @@ export async function POST(req: Request) {
     }
 }
 
-
 // 🛒 DELETE - Remove specific item OR clear entire cart
 export async function DELETE(req: Request) {
     try {

@@ -3,13 +3,17 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 import { useSession } from "next-auth/react";
+
 import { useCartContext } from "@/contexts/CartContext";
 import Hero from "./hero";
 import Spinner from "@/components/spinner";
+import PayWithPayPalButton from "@/components/pay-with-paypal-button";
 
 import WI from "../../assets/images/wise.svg";
+import PP from "../../assets/images/pp.svg";
 
 type TicketType = {
     _id: string;
@@ -19,7 +23,7 @@ type TicketType = {
     currency: string;
     quantity: number;
     sold: number;
-    metadata?: Record<string, any> | any; //eslint-disable-line @typescript-eslint/no-explicit-any
+    metadata?: Record<string, unknown>;
     thumbnail?: {
         dataUrl: string;
         size: number;
@@ -37,12 +41,17 @@ type TicketType = {
 };
 
 export default function Main() {
+    const router = useRouter();
+
     const { data: session } = useSession();
-    const { addToCart } = useCartContext();
+    const { addToCart, cart } = useCartContext();
 
     const [tickets, setTickets] = useState<TicketType[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // track per-ticket desired quantities (local UI state)
+    const [quantities, setQuantities] = useState<Record<string, number>>({});
 
     // Modal state for Wise deposit instructions + order creation state
     const [showWiseModal, setShowWiseModal] = useState(false);
@@ -67,8 +76,16 @@ export default function Main() {
                 if (!res.ok) throw new Error("Failed to load tickets");
                 const data = await res.json();
                 const list: TicketType[] = Array.isArray(data) ? data : data.tickets ?? data;
-                if (mounted) setTickets(list);
-            } catch (e: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
+                if (mounted) {
+                    setTickets(list);
+                    // initialize quantities for items not in cart to 1
+                    const initial: Record<string, number> = {};
+                    for (const t of list) {
+                        initial[t._id] = 1;
+                    }
+                    setQuantities((prev) => ({ ...initial, ...prev }));
+                }
+            } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error(e);
                 if (mounted) setError(e?.message ?? "Failed to load");
             } finally {
@@ -102,7 +119,11 @@ export default function Main() {
     };
 
     // Create order and then open the Wise link
-    const createOrderAndOpenWise = async (ticketId?: string, paymentLink?: string | null, instructions?: string | null) => {
+    const createOrderAndOpenWise = async (
+        ticketId?: string,
+        paymentLink?: string | null,
+        instructions?: string | null
+    ) => {
         if (!ticketId) return setOrderError("Missing ticket id");
         setOrderError(null);
         setCreatingOrder(true);
@@ -135,7 +156,8 @@ export default function Main() {
             // Open the Wise link (in a new tab) so the user can see bank details
             if (paymentLink) {
                 // open in new tab; keep modal open so user sees order id/instructions
-                window.open(paymentLink, "_blank");
+                // window.open(paymentLink, "_blank");
+                router.push(paymentLink);
             }
 
             setCreatingOrder(false);
@@ -144,6 +166,33 @@ export default function Main() {
             setOrderError(err?.message || "Failed to create order");
             setCreatingOrder(false);
         }
+    };
+
+    // quantity helpers
+    // const setQuantityFor = (ticketId: string, q: number) => {
+    //     setQuantities((prev) => ({ ...prev, [ticketId]: q }));
+    // };
+
+    const incrementQty = (ticketId: string, max: number) => {
+        setQuantities((prev) => {
+            const current = Math.max(1, Number(prev[ticketId] ?? 1));
+            const next = Math.min(max, current + 1);
+            return { ...prev, [ticketId]: next };
+        });
+    };
+
+    const decrementQty = (ticketId: string) => {
+        setQuantities((prev) => {
+            const current = Math.max(1, Number(prev[ticketId] ?? 1));
+            const next = Math.max(1, current - 1);
+            return { ...prev, [ticketId]: next };
+        });
+    };
+
+    // Add to cart handler: uses chosen quantity
+    const handleAddToCart = (ticket: TicketType) => {
+        const desired = Math.max(1, Number(quantities[ticket._id] ?? 1));
+        addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, desired);
     };
 
     return (
@@ -166,13 +215,23 @@ export default function Main() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {tickets.map((ticket) => {
                                 const remaining = Math.max(0, ticket.quantity - ticket.sold);
+                                const cartQuantity = cart?.find((i) => i.ticketId === ticket._id)?.quantity ?? 0;
+                                const maxSelectable = Math.max(0, remaining - cartQuantity);
+                                const qty = Math.max(1, Number(quantities[ticket._id] ?? 1));
 
                                 return (
-                                    <div key={ticket._id} className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between">
+                                    <div
+                                        key={ticket._id}
+                                        className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between"
+                                    >
                                         <div>
                                             {ticket.thumbnail?.dataUrl ? (
                                                 <div className="mb-3 w-full flex justify-center">
-                                                    <Image src={ticket.thumbnail.dataUrl} alt={`${ticket.name} thumbnail`} width={1920} height={1080} className="w-full aspect-video object-cover rounded-t-2xl" />
+                                                    <img
+                                                        src={ticket.thumbnail.dataUrl}
+                                                        alt={`${ticket.name} thumbnail`}
+                                                        className="w-full aspect-video object-cover rounded-t-2xl"
+                                                    />
                                                 </div>
                                             ) : null}
 
@@ -187,35 +246,100 @@ export default function Main() {
                                             <p className="px-4 text-sm text-gray-400 mt-1">{remaining} left</p>
                                         </div>
 
-                                        <div className="mt-4 px-4 pb-4 flex flex-col gap-2">
-                                            <button onClick={() => addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, 1)} className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`} disabled>
-                                                <h3>Add to Cart</h3>
-                                            </button>
+                                        <div className="mt-4 px-4 pb-4 flex flex-col gap-3">
+                                            {/* Quantity selector */}
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-sm">Quantity</label>
+                                                <div className="ml-auto flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        aria-label="Decrease quantity"
+                                                        onClick={() => decrementQty(ticket._id)}
+                                                        className="px-2 py-1 bg-white/10 rounded"
+                                                        disabled={qty <= 1}
+                                                    >
+                                                        −
+                                                    </button>
+                                                    <span>
+                                                        {qty}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        aria-label="Increase quantity"
+                                                        onClick={() => incrementQty(ticket._id, Math.max(1, maxSelectable))}
+                                                        className="px-2 py-1 bg-white/10 rounded"
+                                                        disabled={qty >= Math.max(1, maxSelectable)}
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </div>
 
+                                            {/* Add to cart / Buy actions */}
                                             {ticket.wise?.enabled && ticket.wise?.paymentLink ? (
                                                 <>
                                                     {session?.user ? (
                                                         <>
                                                             {session?.user.profileComplete ? (
-                                                                <button onClick={() => openWiseModal(ticket)} className="mt-2 flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95">
-                                                                    <span>Buy with</span>
-                                                                    <Image src={WI} alt="wise" width={20} height={20} />
-                                                                    <span>Wise</span>
-                                                                </button>
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleAddToCart(ticket)}
+                                                                        className="mt-2 cta cta-outline px-4 py-2 rounded-full hover:opacity-90"
+                                                                        disabled={remaining === 0 || maxSelectable <= 0}
+                                                                    >
+                                                                        <h3>Add to Cart</h3>
+                                                                    </button>
+
+                                                                    <button
+                                                                        onClick={() => openWiseModal(ticket)}
+                                                                        className="mt-2 flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
+                                                                        disabled={remaining === 0}
+                                                                    >
+                                                                        <span>Buy with</span>
+                                                                        <Image src={WI} alt="wise" width={20} height={20} />
+                                                                        <span>Wise</span>
+                                                                    </button>
+
+                                                                    <PayWithPayPalButton ticketId={ticket._id} />
+                                                                </>
                                                             ) : (
-                                                                <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                                    <span>Complete your profile to buy with</span>
-                                                                    <Image src={WI} alt="wise" width={20} height={20} />
-                                                                    <span>Wise</span>
-                                                                </Link>
+                                                                <>
+                                                                    <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
+                                                                        <span>Complete your profile to Add to Cart</span>
+                                                                    </Link>
+
+                                                                    <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
+                                                                        <span>Complete your profile to buy with</span>
+                                                                        <Image src={WI} alt="wise" width={20} height={20} />
+                                                                        <span>Wise</span>
+                                                                    </Link>
+
+                                                                    <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
+                                                                        <span>Complete your profile to buy with</span>
+                                                                        <Image src={PP} alt="paypal" width={20} height={20} />
+                                                                        <span>PayPal</span>
+                                                                    </Link>
+                                                                </>
                                                             )}
                                                         </>
                                                     ) : (
-                                                        <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                            <span>Sign in to buy with</span>
-                                                            <Image src={WI} alt="wise" width={20} height={20} />
-                                                            <span>Wise</span>
-                                                        </Link>
+                                                        <>
+                                                            <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
+                                                                <span>Sign in to Add to Cart</span>
+                                                            </Link>
+
+                                                            <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
+                                                                <span>Sign in to buy with</span>
+                                                                <Image src={WI} alt="wise" width={20} height={20} />
+                                                                <span>Wise</span>
+                                                            </Link>
+
+                                                            <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
+                                                                <span>Sign in to buy with</span>
+                                                                <Image src={PP} alt="paypal" width={20} height={20} />
+                                                                <span>Paypal</span>
+                                                            </Link>
+                                                        </>
                                                     )}
                                                 </>
                                             ) : null}
@@ -230,14 +354,21 @@ export default function Main() {
 
             {/* Wise deposit modal */}
             {showWiseModal && wiseModalData && (
-                <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeWiseModal}>
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+                    onClick={closeWiseModal}
+                >
                     <div className="bg-white text-black rounded-lg max-w-xl w-full p-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-start justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold">Pay with Wise — {wiseModalData.name}</h3>
                                 <p className="text-sm text-gray-600">Follow the instructions below to complete your payment.</p>
                             </div>
-                            <button onClick={closeWiseModal} aria-label="Close" className="text-gray-600 hover:text-gray-800">✕</button>
+                            <button onClick={closeWiseModal} aria-label="Close" className="text-gray-600 hover:text-gray-800">
+                                ✕
+                            </button>
                         </div>
 
                         <div className="mt-4 space-y-4 text-sm">
@@ -254,11 +385,20 @@ export default function Main() {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-3">
                                         {createdOrderId ? (
-                                            <a href={wiseModalData.paymentLink} className="inline-block mt-2 cta cta-solid text-black text-center px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95" target="_blank" rel="noopener noreferrer">
+                                            <a
+                                                href={wiseModalData.paymentLink}
+                                                className="inline-block mt-2 cta cta-solid text-black text-center px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
                                                 Open Wise Payment Details
                                             </a>
                                         ) : (
-                                            <button onClick={() => createOrderAndOpenWise(wiseModalData.ticketId, wiseModalData.paymentLink, wiseModalData.instructions)} disabled={creatingOrder} className="inline-block mt-2 cta cta-solid text-black px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95">
+                                            <button
+                                                onClick={() => createOrderAndOpenWise(wiseModalData.ticketId, wiseModalData.paymentLink, wiseModalData.instructions)}
+                                                disabled={creatingOrder}
+                                                className="inline-block mt-2 cta cta-solid text-black px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
+                                            >
                                                 {creatingOrder ? "Creating order..." : "Open Wise Payment Details"}
                                             </button>
                                         )}
@@ -288,7 +428,9 @@ export default function Main() {
                         </div>
 
                         <div className="mt-6 flex justify-end">
-                            <button onClick={closeWiseModal} className="px-4 py-2 rounded bg-gray-200">Close</button>
+                            <button onClick={closeWiseModal} className="px-4 py-2 rounded bg-gray-200">
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
