@@ -10,7 +10,7 @@ import { useToast } from "@/components/toast-provider";
 import Spinner from "@/components/spinner";
 import { useCartContext } from "@/contexts/CartContext";
 
-import PP from "../assets/images/pp.svg"; // adjust path if needed
+import PP from "../assets/images/pp.svg";
 
 export default function PayWithPayPalButton({
     ticketId,
@@ -18,18 +18,19 @@ export default function PayWithPayPalButton({
     useCart = false,
     className = "",
     children,
+    discountCode,
 }: {
     ticketId?: string;
     quantity?: number;
     useCart?: boolean;
     className?: string;
     children?: React.ReactNode;
+    discountCode?: string | null; // optional for single-ticket flow
 }) {
     const toast = useToast();
     const router = useRouter();
     const { data: session } = useSession();
-    const { cart, clearCart, updateQuantity } = useCartContext();
-
+    const { cart, clearCart } = useCartContext();
     const [loading, setLoading] = useState(false);
 
     type CartItem = {
@@ -38,75 +39,43 @@ export default function PayWithPayPalButton({
         ticketCurrency: string;
         ticketId: string;
         quantity: number;
+        discountCode?: string | null;
+        discountedPrice?: number | null;
     };
 
     const cartSummary = useMemo(() => {
         if (!cart || cart.length === 0) return null;
         const currency = cart[0].ticketCurrency ?? "USD";
-        const total = cart.reduce((acc, it) => acc + (it.ticketPrice ?? 0) * (it.quantity ?? 1), 0);
+        const total = cart.reduce((acc, it) => acc + (it.discountedPrice ?? it.ticketPrice ?? 0) * (it.quantity ?? 1), 0);
         return { currency, total, items: cart as CartItem[] };
     }, [cart]);
-
-    // const openSafe = (url?: string | null) => {
-    //     if (!url) {
-    //         toast.push({ title: "No link", message: "No approval link available", level: "error" });
-    //         return;
-    //     }
-    //     // open about:blank to avoid popup blocker, then navigate
-    //     const win = window.open("about:blank", "_blank");
-    //     if (!win) {
-    //         toast.push({
-    //             title: "Popup blocked",
-    //             message: "Popup blocked — please copy the link from the dialog.",
-    //             level: "warning",
-    //         });
-    //         return;
-    //     }
-    //     try {
-    //         // best-effort sever opener relationship
-    //         // @ts-ignore
-    //         win.opener = null;
-    //     } catch { }
-    //     win.location.href = url;
-    // };
 
     const buildPayload = () => {
         if (useCart) {
             if (!cartSummary || cartSummary.items.length === 0) return null;
-            const items = cartSummary.items.map((it) => ({ ticketId: it.ticketId, quantity: it.quantity }));
+            const items = cartSummary.items.map((it) => ({
+                ticketId: it.ticketId,
+                quantity: it.quantity,
+                discountCode: it.discountCode ?? null,
+            }));
             return { items };
         }
 
         if (!ticketId) return null;
-        return { ticketId, quantity };
-    };
-
-    // Try to extract an available quantity integer from a human message.
-    // Returns integer or null.
-    const extractAvailableQuantity = (text?: string): number | null => {
-        if (!text) return null;
-        // common patterns: "Only 3 left", "Only 3 ticket(s) left", "3 left"
-        const re = /Only\s+(\d+)\s+left|Only\s+(\d+)|(\d+)\s+left|available\s*[:=]\s*(\d+)/i;
-        const m = text.match(re);
-        if (m) {
-            for (let i = 1; i < m.length; i++) {
-                const val = m[i];
-                if (val) {
-                    const n = parseInt(val, 10);
-                    if (!Number.isNaN(n)) return n;
-                }
-            }
-        }
-        // fallback: any integer in string
-        const anyInt = text.match(/(\d+)/);
-        if (anyInt) {
-            const n = parseInt(anyInt[1], 10);
-            if (!Number.isNaN(n)) return n;
-        }
-        return null;
+        return {
+            ticketId,
+            quantity,
+            discountCode: discountCode ?? null,
+        };
     };
 
     const handleClick = async () => {
+        if (!session?.user?.email) {
+            toast.push({ title: "Sign in required", message: "Please sign in to proceed to payment.", level: "info" });
+            router.push("/api/auth/signin");
+            return;
+        }
+
         if (!session?.user?.email) {
             toast.push({ title: "Sign in required", message: "Please sign in to proceed to payment.", level: "info" });
             router.push("/api/auth/signin");
@@ -131,43 +100,37 @@ export default function PayWithPayPalButton({
             const json = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                // Attempt to gracefully handle insufficient-stock style responses
-                // Server ideally returns structured error, but we defensively parse human messages.
-                const errorText = typeof json === "object" ? (json.error ?? json.message ?? JSON.stringify(json)) : String(json);
-                const available = extractAvailableQuantity(String(errorText));
-                if (available !== null && useCart) {
-                    // best-effort: reduce any cart items whose qty > available to `available`
-                    // This is a naive strategy because server message may refer to just one ticket.
-                    // But it's a useful fallback to avoid user confusion.
-                    try {
-                        for (const it of cart) {
-                            if (it.quantity > available) {
-                                await updateQuantity(it.ticketId, available);
+                // if server indicated stock mismatch, server returns message like "Only X left for Y"
+                const message = json?.error ?? json?.message ?? JSON.stringify(json);
+                // If cart checkout, attempt to refresh cart & redirect to tickets if quantity mismatch
+                if (useCart && typeof message === "string") {
+                    // heuristic if server included "Only N left" — server will enforce new quantity on create-order
+                    const m = String(message).match(/Only\s+(\d+)\s+left/);
+                    if (m) {
+                        try {
+                            // refresh cart (server should be authoritative) by fetching /api/cart
+                            const cartRes = await fetch("/api/cart");
+                            if (cartRes.ok) {
+                                await cartRes.json();
+                                // update local cart context (clearCart + re-set not available from here if no setter)
+                                // For simplicity: inform user and redirect to tickets page to re-add
+                                toast.push({ title: "Cart updated", message: "Some items changed availability — please review your cart.", level: "warning" });
+                                router.push("/tickets");
+                                return;
                             }
+                        } catch (e) {
+                            // fallback to showing error
+                            console.log(e)
                         }
-                        toast.push({
-                            title: "Cart adjusted",
-                            message: `Some items exceeded availability and were reduced to ${available}. Please review your cart.`,
-                            level: "warning",
-                        });
-                        // redirect user to tickets page to review items (you can change path)
-                        router.push("/tickets");
-                        return;
-                    } catch (uErr) {
-                        console.error("Failed to auto-adjust cart:", uErr);
-                        // fallthrough to showing error toast
                     }
                 }
-
-                // generic fallback error toast
-                toast.push({ title: "Create order failed", message: String(errorText || "Unable to create order"), level: "error" });
+                toast.push({ title: "Create order failed", message: String(message ?? "Unable to create order"), level: "error" });
                 setLoading(false);
                 return;
             }
 
-            // expected response: { orderId, paypalOrderId, approveUrl }
-            const approveUrl: string | undefined = (json.approveUrl as string) ?? (json.approveUrl as string);
-            const orderId: string | undefined = (json.orderId as string) ?? (json.id as string);
+            const approveUrl: string | undefined = json.approveUrl ?? json.approveUrl;
+            const orderId: string | undefined = json.orderId ?? json.id;
 
             if (!approveUrl) {
                 toast.push({ title: "No approval link", message: "PayPal did not return an approval link.", level: "error" });
@@ -175,19 +138,16 @@ export default function PayWithPayPalButton({
                 return;
             }
 
-            // If this was a cart checkout, clear the cart (server/local) now.
+            // If cart checkout, clear cart now
             if (useCart) {
                 try {
-                    await clearCart(); // context will sync state
+                    await clearCart();
                 } catch (err) {
-                    console.error("Failed to clear cart after order creation:", err);
-                    // not fatal — continue
+                    console.warn("clearCart failed after order creation:", err);
                 }
             }
 
-            // Open PayPal in popup-safe way
-            // openSafe(approveUrl);
-
+            // navigate to approveUrl (opening in same tab avoids popup blocking).
             router.push(approveUrl);
 
             toast.push({

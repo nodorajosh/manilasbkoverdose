@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -9,11 +8,13 @@ import { useSession } from "next-auth/react";
 
 import { useCartContext } from "@/contexts/CartContext";
 import Hero from "./hero";
+
 import Spinner from "@/components/spinner";
 import PayWithPayPalButton from "@/components/pay-with-paypal-button";
 
+import { useToast } from "@/components/toast-provider";
+
 import WI from "../../assets/images/wise.svg";
-import PP from "../../assets/images/pp.svg";
 
 type TicketType = {
     _id: string;
@@ -46,6 +47,8 @@ export default function Main() {
     const { data: session } = useSession();
     const { addToCart, cart } = useCartContext();
 
+    const toast = useToast();
+
     const [tickets, setTickets] = useState<TicketType[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,11 @@ export default function Main() {
     const [creatingOrder, setCreatingOrder] = useState(false);
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
     const [orderError, setOrderError] = useState<string | null>(null);
+
+    const [localCode, setLocalCode] = useState<string>("");
+    const [validating, setValidating] = useState(false);
+    const [discountInfo, setDiscountInfo] = useState<{ discountedPrice: number; code: string } | null>(null);
+    const [validateError, setValidateError] = useState<string | null>(null);
 
     // Fetch tickets
     useEffect(() => {
@@ -99,6 +107,18 @@ export default function Main() {
     }, []);
 
     const openWiseModal = (ticket: TicketType) => {
+        if (!session?.user?.email) {
+            toast.push({ title: "Sign in required", message: "Please sign in to proceed to payment.", level: "info" });
+            router.push("/api/auth/signin");
+            return;
+        }
+
+        if (!session?.user?.email) {
+            toast.push({ title: "Complete your profile", message: "Please complete your profile proceed to payment.", level: "info" });
+            router.push("/user");
+            return;
+        }
+
         setWiseModalData({
             paymentLink: ticket.wise?.paymentLink ?? null,
             instructions: ticket.wise?.depositInstructions ?? null,
@@ -190,9 +210,33 @@ export default function Main() {
     };
 
     // Add to cart handler: uses chosen quantity
-    const handleAddToCart = (ticket: TicketType) => {
+    const handleAddToCart = (ticket: TicketType, discountCode: string | null = null, discountedPrice: number | null = null) => {
         const desired = Math.max(1, Number(quantities[ticket._id] ?? 1));
-        addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, desired);
+        addToCart(ticket.name, discountedPrice ? discountedPrice : ticket.price, ticket.currency, ticket._id, desired, discountCode);
+    };
+
+    const validateCode = async (ticketId: string, code: string) => {
+        setValidateError(null);
+        setValidating(true);
+        setDiscountInfo(null);
+        try {
+            const res = await fetch("/api/discounts/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketId, code }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setValidateError(json?.error || "Invalid code");
+            } else {
+                setDiscountInfo({ discountedPrice: json.discountedPrice, code: json.code });
+            }
+        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            console.error("validate discount err", err);
+            setValidateError(err?.message || "Validation failed");
+        } finally {
+            setValidating(false);
+        }
     };
 
     return (
@@ -275,74 +319,56 @@ export default function Main() {
                                                 </div>
                                             </div>
 
-                                            {/* Add to cart / Buy actions */}
-                                            {ticket.wise?.enabled && ticket.wise?.paymentLink ? (
-                                                <>
-                                                    {session?.user ? (
-                                                        <>
-                                                            {session?.user.profileComplete ? (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => handleAddToCart(ticket)}
-                                                                        className="mt-2 cta cta-outline px-4 py-2 rounded-full hover:opacity-90"
-                                                                        disabled={remaining === 0 || maxSelectable <= 0}
-                                                                    >
-                                                                        <h3>Add to Cart</h3>
-                                                                    </button>
+                                            <div className="mt-4 flex flex-col gap-2">
+                                                <div className="flex gap-2 items-center">
+                                                    <input
+                                                        value={localCode}
+                                                        onChange={(e) => { setLocalCode(e.target.value); setValidateError(null); }}
+                                                        placeholder="Discount code"
+                                                        className="border p-2 rounded w-3/4 text-gray-300 uppercase"
+                                                    />
+                                                    <button
+                                                        onClick={() => validateCode(ticket._id, localCode)}
+                                                        disabled={!localCode || validating}
+                                                        className="px-4 py-2 min-w-1/4 cta cta-outline"
+                                                    >
+                                                        {validating ? "Checking…" : "Apply"}
+                                                    </button>
+                                                </div>
 
-                                                                    <button
-                                                                        onClick={() => openWiseModal(ticket)}
-                                                                        className="mt-2 flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
-                                                                        disabled={remaining === 0}
-                                                                    >
-                                                                        <span>Buy with</span>
-                                                                        <Image src={WI} alt="wise" width={20} height={20} />
-                                                                        <span>Wise</span>
-                                                                    </button>
+                                                {validateError && <div className="text-xs text-red-500">{validateError}</div>}
+                                                {discountInfo && (
+                                                    <div className="text-sm text-green-600">
+                                                        Discounted: <strong>${discountInfo.discountedPrice.toFixed(2)}</strong>
+                                                    </div>
+                                                )}
 
-                                                                    <PayWithPayPalButton ticketId={ticket._id} />
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                                        <span>Complete your profile to Add to Cart</span>
-                                                                    </Link>
+                                                <button
+                                                    onClick={() => handleAddToCart(ticket, discountInfo?.code ?? null, discountInfo?.discountedPrice ?? null)}
+                                                    className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
+                                                    disabled={remaining === 0}
+                                                >
+                                                    Add to Cart
+                                                </button>
 
-                                                                    <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                                        <span>Complete your profile to buy with</span>
-                                                                        <Image src={WI} alt="wise" width={20} height={20} />
-                                                                        <span>Wise</span>
-                                                                    </Link>
+                                                <PayWithPayPalButton
+                                                    ticketId={ticket._id}
+                                                    quantity={1}
+                                                    discountCode={discountInfo?.code ?? null}
+                                                />
 
-                                                                    <Link href="/profile" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                                        <span>Complete your profile to buy with</span>
-                                                                        <Image src={PP} alt="paypal" width={20} height={20} />
-                                                                        <span>PayPal</span>
-                                                                    </Link>
-                                                                </>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                                <span>Sign in to Add to Cart</span>
-                                                            </Link>
-
-                                                            <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                                <span>Sign in to buy with</span>
-                                                                <Image src={WI} alt="wise" width={20} height={20} />
-                                                                <span>Wise</span>
-                                                            </Link>
-
-                                                            <Link href="/api/auth/signin" className="mt-2 flex items-center justify-center gap-2 cta cta-outline px-4 py-2 rounded-full">
-                                                                <span>Sign in to buy with</span>
-                                                                <Image src={PP} alt="paypal" width={20} height={20} />
-                                                                <span>Paypal</span>
-                                                            </Link>
-                                                        </>
-                                                    )}
-                                                </>
-                                            ) : null}
+                                                {ticket.wise?.enabled && ticket.wise?.paymentLink && (
+                                                    <button
+                                                        onClick={() => openWiseModal(ticket)}
+                                                        className="flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
+                                                        disabled={remaining === 0 || discountInfo !== null}
+                                                    >
+                                                        <span>Buy with</span>
+                                                        <Image src={WI} alt="wise" width={20} height={20} />
+                                                        <span>Wise</span>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );

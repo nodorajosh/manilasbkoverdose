@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { ticketName, ticketPrice, ticketCurrency, ticketId, quantity = 1 } = body;
+        const { ticketName, ticketPrice, ticketCurrency, ticketId, quantity = 1, discountCode = null } = body;
 
         if (!ticketId) {
             return NextResponse.json({ error: "ticketId is required" }, { status: 400 });
@@ -79,6 +79,7 @@ export async function POST(req: Request) {
                 ticketCurrency,
                 ticketId: objectId,
                 quantity,
+                discountCode,
             });
         }
 

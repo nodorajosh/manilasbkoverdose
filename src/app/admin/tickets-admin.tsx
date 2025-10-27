@@ -129,6 +129,9 @@ export default function TicketsAdmin() {
                                     <div className="font-semibold">
                                         {t.name} <span className="text-xs text-gray-400">({t.status})</span>
                                     </div>
+                                    <div className="text-sm text-gray-400">
+                                        ID: {t._id}
+                                    </div>
                                     <div className="text-sm text-gray-600">
                                         {(t.price).toFixed(2)} {t.currency} • {Math.max(0, t.quantity - (t.sold ?? 0))} left
                                     </div>

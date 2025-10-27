@@ -1,3 +1,4 @@
+// components/contexts/CartContext.tsx  (or wherever your cart context file is)
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
@@ -9,11 +10,13 @@ export type CartItem = {
     ticketCurrency: string;
     ticketId: string;
     quantity: number;
+    discountCode?: string | null;
+    discountedPrice?: number | null; // unit price after discount (decimal)
 };
 
 type CartContextType = {
     cart: CartItem[];
-    addToCart: (name: string, price: number, currency: string, ticketId: string, quantity?: number) => Promise<void>;
+    addToCart: (name: string, price: number, currency: string, ticketId: string, quantity?: number, discountCode?: string | null, discountedPrice?: number | null) => Promise<void>;
     removeFromCart: (ticketId: string) => Promise<void>;
     clearCart: () => Promise<void>;
     updateQuantity: (ticketId: string, newQuantity: number) => Promise<void>;
@@ -25,7 +28,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
     const [cart, setCart] = useState<CartItem[]>([]);
 
-    // Load cart (server for logged in, localStorage for guests)
     useEffect(() => {
         const load = async () => {
             if (session?.user) {
@@ -45,36 +47,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         load();
     }, [session]);
 
-    // persist guest cart to localStorage
     useEffect(() => {
         if (!session?.user) {
             try {
                 localStorage.setItem("cart", JSON.stringify(cart));
-            } catch {
-                // ignore
-            }
+            } catch { }
         }
     }, [cart, session]);
 
     const addToCart = useCallback(
-        async (ticketName: string, ticketPrice: number, ticketCurrency: string, ticketId: string, quantity = 1) => {
+        async (ticketName: string, ticketPrice: number, ticketCurrency: string, ticketId: string, quantity = 1, discountCode: string | null = null) => {
             if (session?.user) {
-                // server expects POST to increment/add
+                // include discount info in server payload
                 await fetch("/api/cart", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ticketId, ticketName, ticketPrice, ticketCurrency, quantity }),
+                    body: JSON.stringify({ ticketId, ticketName, ticketPrice, ticketCurrency, quantity, discountCode }),
                 });
                 const res = await fetch("/api/cart");
                 const data = await res.json();
                 setCart(data.items ?? []);
             } else {
                 setCart((prev) => {
-                    const found = prev.find((p) => p.ticketId === ticketId);
+                    const found = prev.find((p) => p.ticketId === ticketId && p.discountCode === discountCode);
                     if (found) {
-                        return prev.map((p) => (p.ticketId === ticketId ? { ...p, quantity: p.quantity + quantity } : p));
+                        return prev.map((p) => (p.ticketId === ticketId && p.discountCode === discountCode ? { ...p, quantity: p.quantity + quantity } : p));
                     }
-                    return [...prev, { ticketName, ticketPrice, ticketCurrency, ticketId, quantity }];
+                    return [...prev, { ticketName, ticketPrice, ticketCurrency, ticketId, quantity, discountCode: discountCode ?? null }];
                 });
             }
         },
@@ -130,7 +129,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             try {
                 if (newQuantity <= 0) {
-                    // remove entirely
+                    // remove entirely                    
                     await fetch(`/api/cart?ticketId=${encodeURIComponent(ticketId)}`, { method: "DELETE" });
                 } else if (newQuantity > existing) {
                     // increment by delta
