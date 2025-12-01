@@ -8,7 +8,7 @@ export default function Trailer() {
         >
             <div className="px-6 pt-12 pb-2 lg:pb-12 w-full lg:w-[67%]">
                 <iframe
-                    src="https://www.youtube.com/embed/mFjzuSR88oc?si=tEYimsN6LT6AJyBG"
+                    src="https://www.youtube.com/embed/CbGNqqe3Zuw?si=Soe7H1ZOWUas9Ku8"
                     width="100%"
                     height="100%"
                     className="aspect-video"
