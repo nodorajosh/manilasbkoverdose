@@ -39,6 +39,12 @@ const TicketSchema = new Schema(
             enum: ["active", "archived", "draft"],
             default: "active",
         },
+        category: {
+            type: String,
+            enum: ["pass", "bootcamp"],
+            default: "pass",
+            required: true,
+        },
     },
     { timestamps: true }
 );
