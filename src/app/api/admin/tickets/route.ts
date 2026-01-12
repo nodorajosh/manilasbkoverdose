@@ -32,6 +32,7 @@ const createTicketSchema = z.object({
         })
         .optional(),
     status: z.enum(["active", "archived", "draft"]).optional(),
+    category: z.enum(["pass", "bootcamp"]),
 });
 
 const updateTicketSchema = z.object({
@@ -61,6 +62,7 @@ const updateTicketSchema = z.object({
         .optional()
         .nullable(),
     status: z.enum(["active", "archived", "draft"]).optional(),
+    category: z.enum(["pass", "bootcamp"]),
 });
 
 export async function GET(req: Request) {
@@ -137,6 +139,7 @@ export async function POST(req: Request) {
                 }
                 : { enabled: false },
             status: parsed.data.status ?? "active",
+            category: parsed.data.category ?? "pass",
         });
 
         return NextResponse.json({ ticket: doc });
@@ -180,6 +183,9 @@ export async function PATCH(req: Request) {
         }
         if (parsed.data.status !== undefined) {
             ticket.status = parsed.data.status;
+        }
+        if (parsed.data.category !== undefined) {
+            ticket.category = parsed.data.category;
         }
 
         await ticket.save();

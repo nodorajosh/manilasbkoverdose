@@ -23,6 +23,7 @@ export type Ticket = {
     thumbnail?: Thumbnail | undefined;
     wise?: { enabled: boolean; paymentLink: string | null; depositInstructions?: string | null } | undefined;
     status?: "active" | "archived" | "draft";
+    category: "pass" | "bootcamp";
 };
 
 export default function TicketForm({
@@ -48,6 +49,7 @@ export default function TicketForm({
     const [wisePaymentLink, setWisePaymentLink] = useState<string>(initial?.wise?.paymentLink ?? "");
     const [wiseDepositInstructions, setWiseDepositInstructions] = useState<string>(initial?.wise?.depositInstructions ?? "");
     const [status, setStatus] = useState<Ticket["status"]>(initial?.status ?? "active");
+    const [category, setCategory] = useState<Ticket["category"]>(initial?.category ?? "pass");
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState<string | null>(null);
 
@@ -63,6 +65,7 @@ export default function TicketForm({
         setWisePaymentLink(initial?.wise?.paymentLink ?? "");
         setWiseDepositInstructions(initial?.wise?.depositInstructions ?? "");
         setStatus(initial?.status ?? "active");
+        setCategory(initial?.category ?? "pass");
         setMsg(null);
     }, [initial]);
 
@@ -120,6 +123,7 @@ export default function TicketForm({
                 currency,
                 quantity,
                 status,
+                category,
                 thumbnail: thumbnail ?? undefined,
                 wise: wiseEnabled
                     ? {
@@ -203,6 +207,14 @@ export default function TicketForm({
                     <label className="block text-sm">Quantity</label>
                     <input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="border p-2 w-24" />
                 </div>
+            </div>
+
+            <div>
+                <label className="block text-sm">Category</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value as any)} className="border p-2 w-full"> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
+                    <option value="pass">Pass</option>
+                    <option value="bootcamp">Bootcamp</option>
+                </select>
             </div>
 
             <div>
