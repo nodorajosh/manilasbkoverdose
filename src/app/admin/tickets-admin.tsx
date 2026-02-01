@@ -171,7 +171,7 @@ export default function TicketsAdmin() {
             {/* Create modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="bg-white text-black rounded p-4 w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white text-black rounded p-4 w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-3">
                             <h4 className="font-semibold">Create Ticket</h4>
                             <button onClick={() => setShowCreateModal(false)} className="text-gray-600">✕</button>

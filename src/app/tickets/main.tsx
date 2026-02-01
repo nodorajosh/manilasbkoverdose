@@ -257,227 +257,139 @@ export default function Main() {
                     <div className="w-full max-w-7xl">
                         <h1 className="text-2xl font-bold mb-6 text-center">Tickets</h1>
 
-                        <h3 className="text-lg font-bold my-6 text-start">Passes</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {tickets.map((ticket) => {
-                                const remaining = Math.max(0, ticket.quantity - ticket.sold);
-                                const cartQuantity = cart?.find((i) => i.ticketId === ticket._id)?.quantity ?? 0;
-                                const maxSelectable = Math.max(0, remaining - cartQuantity);
-                                const qty = Math.max(1, Number(quantities[ticket._id] ?? 1));
+                        {["festival pass", "single pass", "special workshops", "other events"].map((category) => (
+                            <div key={category}>
+                                {tickets.some((t) => t.category === category) && (
+                                    <>
+                                        <h3 className="text-lg font-bold my-6 text-start capitalize">{category}</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            {tickets.map((ticket) => {
+                                                const remaining = Math.max(0, ticket.quantity - ticket.sold);
+                                                const cartQuantity = cart?.find((i) => i.ticketId === ticket._id)?.quantity ?? 0;
+                                                const maxSelectable = Math.max(0, remaining - cartQuantity);
+                                                const qty = Math.max(1, Number(quantities[ticket._id] ?? 1));
 
-                                if (ticket.category === "pass") {
-                                    return (
-                                        <div
-                                            key={ticket._id}
-                                            className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between"
-                                        >
-                                            <div>
-                                                {ticket.thumbnail?.dataUrl ? (
-                                                    <div className="mb-3 w-full flex justify-center">
-                                                        <img
-                                                            src={ticket.thumbnail.dataUrl}
-                                                            alt={`${ticket.name} thumbnail`}
-                                                            className="w-full aspect-video object-cover rounded-t-2xl"
-                                                        />
-                                                    </div>
-                                                ) : null}
-
-                                                <h2 className="px-4 text-lg font-semibold">{ticket.name}</h2>
-                                                {ticket.description && <p className="px-4 text-sm text-gray-300 mb-2">{ticket.description}</p>}
-
-                                                <div className="px-4 flex items-baseline gap-2">
-                                                    <div className="text-xl font-bold">${ticket.price}</div>
-                                                    <div className="text-sm text-gray-400"> {ticket.currency}</div>
-                                                </div>
-
-                                                <p className="px-4 text-sm text-gray-400 mt-1">{remaining} left</p>
-                                            </div>
-
-                                            <div className="mt-4 px-4 pb-4 flex flex-col gap-3">
-                                                {/* Quantity selector */}
-                                                <div className="flex items-center gap-2">
-                                                    <label className="text-sm">Quantity</label>
-                                                    <div className="ml-auto flex items-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            aria-label="Decrease quantity"
-                                                            onClick={() => decrementQty(ticket._id)}
-                                                            className="px-2 py-1 bg-white/10 rounded"
-                                                            disabled={qty <= 1}
+                                                if (ticket.category === category) {
+                                                    return (
+                                                        <div
+                                                            key={ticket._id}
+                                                            className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between"
                                                         >
-                                                            −
-                                                        </button>
-                                                        <span>
-                                                            {qty}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            aria-label="Increase quantity"
-                                                            onClick={() => incrementQty(ticket._id, Math.max(1, maxSelectable))}
-                                                            className="px-2 py-1 bg-white/10 rounded"
-                                                            disabled={qty >= Math.max(1, maxSelectable)}
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                                            <div>
+                                                                {ticket.thumbnail?.dataUrl ? (
+                                                                    <div className="mb-3 w-full flex justify-center">
+                                                                        <img
+                                                                            src={ticket.thumbnail.dataUrl}
+                                                                            alt={`${ticket.name} thumbnail`}
+                                                                            className="w-full aspect-video object-cover rounded-t-2xl"
+                                                                        />
+                                                                    </div>
+                                                                ) : null}
 
-                                                <div className="mt-4 flex flex-col gap-2">
-                                                    <div className="flex gap-2 items-center">
-                                                        <input
-                                                            value={localCode}
-                                                            onChange={(e) => { setLocalCode(e.target.value); setValidateError(null); }}
-                                                            placeholder="Discount code"
-                                                            className="border p-2 rounded w-3/4 text-gray-300 uppercase"
-                                                        />
-                                                        <button
-                                                            onClick={() => validateCode(ticket._id, localCode)}
-                                                            disabled={!localCode || validating}
-                                                            className="px-4 py-2 min-w-1/4 cta cta-outline"
-                                                        >
-                                                            {validating ? "Checking…" : "Apply"}
-                                                        </button>
-                                                    </div>
+                                                                <h2 className="px-4 text-lg font-semibold">{ticket.name}</h2>
+                                                                {ticket.description &&
+                                                                    <p
+                                                                        className="px-4 text-sm text-gray-300 mb-2 prose prose-p:my-4"
+                                                                        dangerouslySetInnerHTML={{ __html: ticket.description || "" }}>
+                                                                    </p>}
 
-                                                    {validateError && <div className="text-xs text-red-500">{validateError}</div>}
-                                                    {discountInfo && (
-                                                        <div className="text-sm text-green-600">
-                                                            Discounted: <strong>${discountInfo.discountedPrice.toFixed(2)}</strong>
+                                                                <div className="px-4 flex items-baseline gap-2">
+                                                                    <div className="text-xl font-bold">${ticket.price}</div>
+                                                                    <div className="text-sm text-gray-400"> {ticket.currency}</div>
+                                                                </div>
+
+                                                                <p className="px-4 text-sm text-gray-400 mt-1">{remaining} left</p>
+                                                            </div>
+
+                                                            <div className="mt-4 px-4 pb-4 flex flex-col gap-3">
+                                                                {/* Quantity selector */}
+                                                                <div className="flex items-center gap-2">
+                                                                    <label className="text-sm">Quantity</label>
+                                                                    <div className="ml-auto flex items-center gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            aria-label="Decrease quantity"
+                                                                            onClick={() => decrementQty(ticket._id)}
+                                                                            className="px-2 py-1 bg-white/10 rounded"
+                                                                            disabled={qty <= 1}
+                                                                        >
+                                                                            −
+                                                                        </button>
+                                                                        <span>
+                                                                            {qty}
+                                                                        </span>
+                                                                        <button
+                                                                            type="button"
+                                                                            aria-label="Increase quantity"
+                                                                            onClick={() => incrementQty(ticket._id, Math.max(1, maxSelectable))}
+                                                                            className="px-2 py-1 bg-white/10 rounded"
+                                                                            disabled={qty >= Math.max(1, maxSelectable)}
+                                                                        >
+                                                                            +
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="mt-4 flex flex-col gap-2">
+                                                                    <div className="flex gap-2 items-center">
+                                                                        <input
+                                                                            value={localCode}
+                                                                            onChange={(e) => { setLocalCode(e.target.value); setValidateError(null); }}
+                                                                            placeholder="Discount code"
+                                                                            className="border p-2 rounded w-3/4 text-gray-300 uppercase"
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => validateCode(ticket._id, localCode)}
+                                                                            disabled={!localCode || validating}
+                                                                            className="px-4 py-2 min-w-1/4 cta cta-outline"
+                                                                        >
+                                                                            {validating ? "Checking…" : "Apply"}
+                                                                        </button>
+                                                                    </div>
+
+                                                                    {validateError && <div className="text-xs text-red-500">{validateError}</div>}
+                                                                    {discountInfo && (
+                                                                        <div className="text-sm text-green-600">
+                                                                            Discounted: <strong>${discountInfo.discountedPrice.toFixed(2)}</strong>
+                                                                        </div>
+                                                                    )}
+
+                                                                    <button
+                                                                        onClick={() => handleAddToCart(ticket, discountInfo?.code ?? null, discountInfo?.discountedPrice ?? null)}
+                                                                        className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
+                                                                        disabled={remaining === 0}
+                                                                    >
+                                                                        Add to Cart
+                                                                    </button>
+
+                                                                    <PayWithPayPalButton
+                                                                        ticketId={ticket._id}
+                                                                        quantity={1}
+                                                                        discountCode={discountInfo?.code ?? null}
+                                                                    />
+
+                                                                    {ticket.wise?.enabled && ticket.wise?.paymentLink && (
+                                                                        <button
+                                                                            onClick={() => openWiseModal(ticket)}
+                                                                            className="flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
+                                                                            disabled={remaining === 0 || discountInfo !== null}
+                                                                        >
+                                                                            <span>Buy with</span>
+                                                                            <Image src={WI} alt="wise" width={20} height={20} />
+                                                                            <span>Wise</span>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    )}
-
-                                                    <button
-                                                        onClick={() => handleAddToCart(ticket, discountInfo?.code ?? null, discountInfo?.discountedPrice ?? null)}
-                                                        className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
-                                                        disabled={remaining === 0}
-                                                    >
-                                                        Add to Cart
-                                                    </button>
-
-                                                    <PayWithPayPalButton
-                                                        ticketId={ticket._id}
-                                                        quantity={1}
-                                                        discountCode={discountInfo?.code ?? null}
-                                                    />
-
-                                                    {ticket.wise?.enabled && ticket.wise?.paymentLink && (
-                                                        <button
-                                                            onClick={() => openWiseModal(ticket)}
-                                                            className="flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
-                                                            disabled={remaining === 0 || discountInfo !== null}
-                                                        >
-                                                            <span>Buy with</span>
-                                                            <Image src={WI} alt="wise" width={20} height={20} />
-                                                            <span>Wise</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                    );
+                                                }
+                                            })}
                                         </div>
-                                    );
-                                }
-                            })}
-                        </div>
-
-                        <h3 className="text-lg font-bold mt-12 mb-6 text-start">Bootcamps</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {tickets.map((ticket) => {
-                                const remaining = Math.max(0, ticket.quantity - ticket.sold);
-                                const cartQuantity = cart?.find((i) => i.ticketId === ticket._id)?.quantity ?? 0;
-                                const maxSelectable = Math.max(0, remaining - cartQuantity);
-                                const qty = Math.max(1, Number(quantities[ticket._id] ?? 1));
-
-                                if (ticket.category === "bootcamp") {
-                                    return (
-                                        <div
-                                            key={ticket._id}
-                                            className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between"
-                                        >
-                                            <div>
-                                                {ticket.thumbnail?.dataUrl ? (
-                                                    <div className="mb-3 w-full flex justify-center">
-                                                        <img
-                                                            src={ticket.thumbnail.dataUrl}
-                                                            alt={`${ticket.name} thumbnail`}
-                                                            className="w-full aspect-video object-cover rounded-t-2xl"
-                                                        />
-                                                    </div>
-                                                ) : null}
-
-                                                <h2 className="px-4 text-lg font-semibold">{ticket.name}</h2>
-                                                {ticket.description && <p className="px-4 text-sm text-gray-300 mb-2">{ticket.description}</p>}
-
-                                                <div className="px-4 flex items-baseline gap-2">
-                                                    <div className="text-xl font-bold">${ticket.price}</div>
-                                                    <div className="text-sm text-gray-400"> {ticket.currency}</div>
-                                                </div>
-
-                                                <p className="px-4 text-sm text-gray-400 mt-1">{remaining} left</p>
-                                            </div>
-
-                                            <div className="mt-4 px-4 pb-4 flex flex-col gap-3">
-                                                {/* Quantity selector */}
-                                                <div className="flex items-center gap-2">
-                                                    <label className="text-sm">Quantity</label>
-                                                    <div className="ml-auto flex items-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            aria-label="Decrease quantity"
-                                                            onClick={() => decrementQty(ticket._id)}
-                                                            className="px-2 py-1 bg-white/10 rounded"
-                                                            disabled={qty <= 1}
-                                                        >
-                                                            −
-                                                        </button>
-                                                        <span>
-                                                            {qty}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            aria-label="Increase quantity"
-                                                            onClick={() => incrementQty(ticket._id, Math.max(1, maxSelectable))}
-                                                            className="px-2 py-1 bg-white/10 rounded"
-                                                            disabled={qty >= Math.max(1, maxSelectable)}
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mt-4 flex flex-col gap-2">
-
-                                                    <button
-                                                        onClick={() => handleAddToCart(ticket, discountInfo?.code ?? null, discountInfo?.discountedPrice ?? null)}
-                                                        className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
-                                                        disabled={remaining === 0}
-                                                    >
-                                                        Add to Cart
-                                                    </button>
-
-                                                    <PayWithPayPalButton
-                                                        ticketId={ticket._id}
-                                                        quantity={1}
-                                                        discountCode={discountInfo?.code ?? null}
-                                                    />
-
-                                                    {ticket.wise?.enabled && ticket.wise?.paymentLink && (
-                                                        <button
-                                                            onClick={() => openWiseModal(ticket)}
-                                                            className="flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
-                                                            disabled={remaining === 0 || discountInfo !== null}
-                                                        >
-                                                            <span>Buy with</span>
-                                                            <Image src={WI} alt="wise" width={20} height={20} />
-                                                            <span>Wise</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                            })}
-                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

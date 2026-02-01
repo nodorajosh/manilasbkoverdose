@@ -41,8 +41,8 @@ const TicketSchema = new Schema(
         },
         category: {
             type: String,
-            enum: ["pass", "bootcamp"],
-            default: "pass",
+            enum: ["festival pass", "single pass", "special workshops", "other events"],
+            default: "festival pass",
             required: true,
         },
     },

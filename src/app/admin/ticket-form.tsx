@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useToast } from "@/components/toast-provider";
 
+import { RichTextEditor } from "@/components/rich-text-editor";
+
 type Thumbnail = {
     dataUrl: string;
     size: number;
@@ -23,7 +25,7 @@ export type Ticket = {
     thumbnail?: Thumbnail | undefined;
     wise?: { enabled: boolean; paymentLink: string | null; depositInstructions?: string | null } | undefined;
     status?: "active" | "archived" | "draft";
-    category: "pass" | "bootcamp";
+    category: "festival pass" | "single pass" | "special workshops" | "other events"
 };
 
 export default function TicketForm({
@@ -49,7 +51,7 @@ export default function TicketForm({
     const [wisePaymentLink, setWisePaymentLink] = useState<string>(initial?.wise?.paymentLink ?? "");
     const [wiseDepositInstructions, setWiseDepositInstructions] = useState<string>(initial?.wise?.depositInstructions ?? "");
     const [status, setStatus] = useState<Ticket["status"]>(initial?.status ?? "active");
-    const [category, setCategory] = useState<Ticket["category"]>(initial?.category ?? "pass");
+    const [category, setCategory] = useState<Ticket["category"]>(initial?.category ?? "festival pass");
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState<string | null>(null);
 
@@ -65,7 +67,7 @@ export default function TicketForm({
         setWisePaymentLink(initial?.wise?.paymentLink ?? "");
         setWiseDepositInstructions(initial?.wise?.depositInstructions ?? "");
         setStatus(initial?.status ?? "active");
-        setCategory(initial?.category ?? "pass");
+        setCategory(initial?.category ?? "festival pass");
         setMsg(null);
     }, [initial]);
 
@@ -189,9 +191,13 @@ export default function TicketForm({
                 <input value={name} onChange={(e) => setName(e.target.value)} required className="border p-2 w-full" />
             </div>
 
-            <div>
+            {/* <div>
                 <label className="block text-sm">Description</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="border p-2 w-full" />
+            </div> */}
+            <div>
+                <label className="block text-sm">Description</label>
+                <RichTextEditor value={description} onChange={setDescription} />
             </div>
 
             <div className="flex gap-2">
@@ -212,8 +218,10 @@ export default function TicketForm({
             <div>
                 <label className="block text-sm">Category</label>
                 <select value={category} onChange={(e) => setCategory(e.target.value as any)} className="border p-2 w-full"> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
-                    <option value="pass">Pass</option>
-                    <option value="bootcamp">Bootcamp</option>
+                    <option value="festival pass">Festival Pass</option>
+                    <option value="single pass">Single Pass</option>
+                    <option value="special workshops">Special Workshops</option>
+                    <option value="other events">Other Events</option>
                 </select>
             </div>
 
