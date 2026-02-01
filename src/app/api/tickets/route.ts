@@ -7,7 +7,7 @@ export async function GET() {
         await connectMongoose();
         const tickets = await Ticket.find({ status: "active" }).sort({ createdAt: -1 });
         const orderedTickets = tickets.sort((a, b) => {
-            const rank = (t: any) => {
+            const rank = (t: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
                 const name = (t.name || "").toLowerCase();
 
                 if (name.includes("full festival")) return 0;
