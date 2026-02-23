@@ -289,7 +289,7 @@ export default function Main() {
                                                                 <h2 className="px-4 text-lg font-semibold">{ticket.name}</h2>
                                                                 {ticket.description &&
                                                                     <p
-                                                                        className="px-4 text-sm text-gray-300 mb-2 prose prose-p:my-4"
+                                                                        className="px-4 text-sm text-gray-300 mb-2 prose prose-p:my-4 prose-strong:text-peach-200 prose-h3:text-peach-200"
                                                                         dangerouslySetInnerHTML={{ __html: ticket.description || "" }}>
                                                                     </p>}
 

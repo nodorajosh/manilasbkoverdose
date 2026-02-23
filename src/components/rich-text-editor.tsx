@@ -31,10 +31,28 @@ export function RichTextEditor({
     return (
         <div className="border rounded">
             <div className="flex gap-2 border-b p-2 text-sm">
-                <button onClick={() => editor?.chain().focus().toggleBold().run()}>Bold</button>
-                <button onClick={() => editor?.chain().focus().toggleItalic().run()}>Italic</button>
-                <button onClick={() => editor?.chain().focus().toggleBulletList().run()}>• List</button>
-                <button onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}>
+                <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleBold().run()}
+                >
+                    Bold
+                </button>
+                <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleItalic().run()}
+                >
+                    Italic
+                </button>
+                <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                >
+                    • List
+                </button>
+                <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                >
                     H3
                 </button>
             </div>
