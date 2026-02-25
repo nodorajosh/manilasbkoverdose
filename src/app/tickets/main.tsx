@@ -70,10 +70,10 @@ export default function Main() {
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
     const [orderError, setOrderError] = useState<string | null>(null);
 
-    const [localCode, setLocalCode] = useState<string>("");
-    const [validating, setValidating] = useState(false);
-    const [discountInfo, setDiscountInfo] = useState<{ discountedPrice: number; code: string } | null>(null);
-    const [validateError, setValidateError] = useState<string | null>(null);
+    const [localCodes, setLocalCodes] = useState<Record<string, string>>({});
+    const [validatingTicketId, setValidatingTicketId] = useState<string | null>(null);
+    const [discountInfo, setDiscountInfo] = useState<Record<string, { discountedPrice: number; code: string } | undefined>>({});
+    const [validateErrors, setValidateErrors] = useState<Record<string, string>>({});
 
     // Fetch tickets
     useEffect(() => {
@@ -217,9 +217,13 @@ export default function Main() {
     };
 
     const validateCode = async (ticketId: string, code: string) => {
-        setValidateError(null);
-        setValidating(true);
-        setDiscountInfo(null);
+        setValidateErrors((prev) => ({ ...prev, [ticketId]: "" }));
+        setValidatingTicketId(ticketId);
+        setDiscountInfo((prev) => {
+            const updated = { ...prev };
+            delete updated[ticketId];
+            return updated;
+        });
         try {
             const res = await fetch("/api/discounts/validate", {
                 method: "POST",
@@ -228,15 +232,15 @@ export default function Main() {
             });
             const json = await res.json();
             if (!res.ok) {
-                setValidateError(json?.error || "Invalid code");
+                setValidateErrors((prev) => ({ ...prev, [ticketId]: json?.error || "Invalid code" }));
             } else {
-                setDiscountInfo({ discountedPrice: json.discountedPrice, code: json.code });
+                setDiscountInfo((prev) => ({ ...prev, [ticketId]: { discountedPrice: json.discountedPrice, code: json.code } }));
             }
         } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             console.error("validate discount err", err);
-            setValidateError(err?.message || "Validation failed");
+            setValidateErrors((prev) => ({ ...prev, [ticketId]: err?.message || "Validation failed" }));
         } finally {
-            setValidating(false);
+            setValidatingTicketId(null);
         }
     };
 
@@ -333,29 +337,29 @@ export default function Main() {
                                                                 <div className="mt-4 flex flex-col gap-2">
                                                                     <div className="flex gap-2 items-center">
                                                                         <input
-                                                                            value={localCode}
-                                                                            onChange={(e) => { setLocalCode(e.target.value); setValidateError(null); }}
+                                                                            value={localCodes[ticket._id] ?? ""}
+                                                                            onChange={(e) => { setLocalCodes((prev) => ({ ...prev, [ticket._id]: e.target.value })); setValidateErrors((prev) => ({ ...prev, [ticket._id]: "" })); }}
                                                                             placeholder="Discount code"
                                                                             className="border p-2 rounded w-3/4 text-gray-300 uppercase"
                                                                         />
                                                                         <button
-                                                                            onClick={() => validateCode(ticket._id, localCode)}
-                                                                            disabled={!localCode || validating}
+                                                                            onClick={() => validateCode(ticket._id, localCodes[ticket._id] ?? "")}
+                                                                            disabled={!(localCodes[ticket._id] ?? "") || validatingTicketId === ticket._id}
                                                                             className="px-4 py-2 min-w-1/4 cta cta-outline"
                                                                         >
-                                                                            {validating ? "Checking…" : "Apply"}
+                                                                            {validatingTicketId === ticket._id ? "Checking…" : "Apply"}
                                                                         </button>
                                                                     </div>
 
-                                                                    {validateError && <div className="text-xs text-red-500">{validateError}</div>}
-                                                                    {discountInfo && (
+                                                                    {validateErrors[ticket._id] && <div className="text-xs text-red-500">{validateErrors[ticket._id]}</div>}
+                                                                    {discountInfo[ticket._id] && discountInfo[ticket._id]?.discountedPrice !== undefined && (
                                                                         <div className="text-sm text-green-600">
-                                                                            Discounted: <strong>${discountInfo.discountedPrice.toFixed(2)}</strong>
+                                                                            Discounted: <strong>${discountInfo[ticket._id]!.discountedPrice.toFixed(2)}</strong>
                                                                         </div>
                                                                     )}
 
                                                                     <button
-                                                                        onClick={() => handleAddToCart(ticket, discountInfo?.code ?? null, discountInfo?.discountedPrice ?? null)}
+                                                                        onClick={() => handleAddToCart(ticket, discountInfo[ticket._id]?.code ?? null, discountInfo[ticket._id]?.discountedPrice ?? null)}
                                                                         className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
                                                                         disabled={remaining === 0}
                                                                     >
@@ -365,14 +369,14 @@ export default function Main() {
                                                                     <PayWithPayPalButton
                                                                         ticketId={ticket._id}
                                                                         quantity={1}
-                                                                        discountCode={discountInfo?.code ?? null}
+                                                                        discountCode={discountInfo[ticket._id]?.code ?? null}
                                                                     />
 
                                                                     {ticket.wise?.enabled && ticket.wise?.paymentLink && (
                                                                         <button
                                                                             onClick={() => openWiseModal(ticket)}
                                                                             className="flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
-                                                                            disabled={remaining === 0 || discountInfo !== null}
+                                                                            disabled={remaining === 0 || discountInfo[ticket._id] !== undefined}
                                                                         >
                                                                             <span>Buy with</span>
                                                                             <Image src={WI} alt="wise" width={20} height={20} />
