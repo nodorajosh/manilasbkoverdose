@@ -1,23 +1,23 @@
-// components/admin/OrdersAdmin.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
-
 import ConfirmModal from "@/components/confirm-modal";
 import { useToast } from "@/components/toast-provider";
 import Spinner from "@/components/spinner";
+import { trpc } from "@/trpc/react";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { LoadMoreSentinel } from "@/components/admin/load-more-sentinel";
 
 type OrderItem = {
     name: string;
     quantity: number;
-    // other item fields...
 };
 
 type Order = {
     _id: string;
     userId?: string;
-    totalAmount: number; // assumed already decimal number (not cents) as in your previous code
+    totalAmount: number;
     currency: string;
     status: string;
     items: OrderItem[];
@@ -26,38 +26,41 @@ type Order = {
 
 export default function OrdersAdmin() {
     const toast = useToast();
+    const utils = trpc.useUtils();
 
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [actionPending, setActionPending] = useState<string | null>(null); // orderId currently being acted on
-    const [confirm, setConfirm] = useState<{ open: boolean; order?: Order | null; action?: string | null }>({
-        open: false,
-        order: null,
-        action: null,
+    const [actionPending, setActionPending] = useState<string | null>(null);
+    const [confirm, setConfirm] = useState<{
+        open: boolean;
+        order?: Order | null;
+        action?: string | null;
+    }>({ open: false, order: null, action: null });
+
+    const listQuery = trpc.admin.orders.list.useInfiniteQuery(
+        { limit: 20 },
+        { getNextPageParam: (last) => last.nextCursor }
+    );
+
+    const orders = useMemo(() => {
+        const raw = listQuery.data?.pages.flatMap((p) => p.items) ?? [];
+        return raw.map((o) => ({
+            _id: String(o._id),
+            userId: o.userId as string | undefined,
+            totalAmount: o.totalAmount as number,
+            currency: o.currency as string,
+            status: o.status as string,
+            items: (o.items ?? []) as OrderItem[],
+            createdAt:
+                o.createdAt instanceof Date
+                    ? o.createdAt.toISOString()
+                    : String(o.createdAt ?? ""),
+        }));
+    }, [listQuery.data]);
+
+    const sentinelRef = useInfiniteScroll({
+        hasNextPage: listQuery.hasNextPage,
+        isFetchingNextPage: listQuery.isFetchingNextPage,
+        fetchNextPage: () => listQuery.fetchNextPage(),
     });
-
-    const fetchOrders = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch("/api/admin/orders");
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err?.error || "Failed to fetch orders");
-            }
-            const data = await res.json();
-            setOrders(data.orders ?? []);
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error("fetchOrders error:", err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchOrders();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const openConfirm = (order: Order, action: string) => {
         setConfirm({ open: true, order, action });
@@ -80,22 +83,17 @@ export default function OrdersAdmin() {
                 throw new Error(msg);
             }
 
-            // Update local list (optimistic on server success)
-            setOrders((prev) =>
-                prev.map((o) => (o._id === orderId ? { ...o, status } : o))
-            );
-
+            await utils.admin.orders.list.invalidate();
             toast.push({ title: "Updated", message: `Order ${orderId} set to "${status}"`, level: "success" });
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error("performUpdate error:", err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.push({ title: "Error", message, level: "error" });
         } finally {
             setActionPending(null);
             closeConfirm();
         }
     };
 
-    // Confirm modal handler
     const handleConfirm = async () => {
         if (!confirm.order || !confirm.action) return closeConfirm();
         await performUpdate(confirm.order._id, confirm.action);
@@ -106,15 +104,17 @@ export default function OrdersAdmin() {
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Orders</h3>
                 <div className="flex gap-2">
-                    <button onClick={fetchOrders} className="px-3 py-1 bg-blue-600 text-white rounded">Refresh</button>
+                    <button onClick={() => listQuery.refetch()} className="px-3 py-1 bg-blue-600 text-white rounded">Refresh</button>
                 </div>
             </div>
 
-            {loading ? (
+            {listQuery.isLoading ? (
                 <span className="flex items-center gap-3">
                     <Spinner />
                     <p className="ml-2 text-gray-400">Loading orders...</p>
                 </span>
+            ) : listQuery.isError ? (
+                <div className="text-sm text-red-400">Failed to load orders.</div>
             ) : orders.length === 0 ? (
                 <div className="text-sm text-gray-400">No orders found.</div>
             ) : (
@@ -122,20 +122,19 @@ export default function OrdersAdmin() {
                     {orders.map((o) => (
                         <div key={o._id} className="p-3 border rounded">
                             <div>
-                                <Link
-                                    href={`/orders/${o._id}`}
-                                    className="flex flex-col md:flex-row md:justify-between"
-                                >
+                                <Link href={`/orders/${o._id}`} className="flex flex-col md:flex-row md:justify-between">
                                     <div>
                                         <div className="font-semibold">Order {o._id}</div>
                                         <div className="text-sm text-gray-300">{o.userId}</div>
                                         <div className="text-sm">
-                                            {(typeof o.totalAmount === "number" ? o.totalAmount.toFixed(2) : String(o.totalAmount))} {o.currency}
+                                            {(typeof o.totalAmount === "number" ? o.totalAmount.toFixed(2) : String(o.totalAmount))}{" "}
+                                            {o.currency}
                                         </div>
                                     </div>
-
                                     <div className="mt-3 md:mt-0 text-sm text-right">
-                                        <div>Status: <strong>{o.status}</strong></div>
+                                        <div>
+                                            Status: <strong>{o.status}</strong>
+                                        </div>
                                         <div>{new Date(o.createdAt).toLocaleString()}</div>
                                     </div>
                                 </Link>
@@ -177,18 +176,31 @@ export default function OrdersAdmin() {
                             </div>
                         </div>
                     ))}
+                    <LoadMoreSentinel
+                        sentinelRef={sentinelRef}
+                        isFetchingNextPage={listQuery.isFetchingNextPage}
+                        hasNextPage={listQuery.hasNextPage}
+                    />
                 </div>
             )}
 
             <ConfirmModal
                 open={confirm.open}
-                title={confirm.action === "paid" ? "Mark order as paid?" : confirm.action === "fulfilled" ? "Mark order fulfilled?" : "Change order status?"}
+                title={
+                    confirm.action === "paid"
+                        ? "Mark order as paid?"
+                        : confirm.action === "fulfilled"
+                          ? "Mark order fulfilled?"
+                          : "Change order status?"
+                }
                 description={
                     confirm.order
                         ? `Order ${confirm.order._id} — change status to "${confirm.action}". Are you sure you want to proceed?`
                         : undefined
                 }
-                confirmLabel={confirm.action === "paid" ? "Mark paid" : confirm.action === "fulfilled" ? "Fulfill" : "Confirm"}
+                confirmLabel={
+                    confirm.action === "paid" ? "Mark paid" : confirm.action === "fulfilled" ? "Fulfill" : "Confirm"
+                }
                 cancelLabel="Cancel"
                 onConfirm={handleConfirm}
                 onCancel={closeConfirm}

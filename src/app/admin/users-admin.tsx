@@ -1,10 +1,12 @@
-// components/admin/UsersAdmin.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { useToast } from "@/components/toast-provider";
 import Image from "next/image";
+import { trpc } from "@/trpc/react";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { LoadMoreSentinel } from "@/components/admin/load-more-sentinel";
+import Spinner from "@/components/spinner";
 
 export type UserListItem = {
     _id: string;
@@ -17,39 +19,32 @@ export type UserListItem = {
 };
 
 export default function UsersAdmin() {
-    const [users, setUsers] = useState<UserListItem[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
     const [query, setQuery] = useState<string>("");
 
-    const toast = useToast();
+    const listQuery = trpc.admin.users.list.useInfiniteQuery(
+        { limit: 20 },
+        { getNextPageParam: (last) => last.nextCursor }
+    );
 
-    const fetchUsers = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch("/api/admin/users");
-            const payload = await res.json();
-            if (!res.ok) throw new Error(payload?.error || "Failed to load users");
-            setUsers(payload.users ?? []);
-        } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error("fetchUsers error:", err);
-            setError(err?.message ?? String(err));
-            toast.push({ title: "Error", message: "Failed to load users", level: "error" });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsers();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    const users = useMemo(
+        () => (listQuery.data?.pages.flatMap((p) => p.items) ?? []) as UserListItem[],
+        [listQuery.data]
+    );
 
     const filtered = users.filter((u) => {
         if (!query) return true;
         const q = query.toLowerCase();
-        return (u.name ?? "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q);
+        return (
+            (u.name ?? "").toLowerCase().includes(q) ||
+            u.email.toLowerCase().includes(q) ||
+            u.role.toLowerCase().includes(q)
+        );
+    });
+
+    const sentinelRef = useInfiniteScroll({
+        hasNextPage: listQuery.hasNextPage,
+        isFetchingNextPage: listQuery.isFetchingNextPage,
+        fetchNextPage: () => listQuery.fetchNextPage(),
     });
 
     return (
@@ -57,7 +52,7 @@ export default function UsersAdmin() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <h3 className="font-semibold">Users</h3>
-                    <div className="text-sm text-gray-400">({users.length})</div>
+                    <div className="text-sm text-gray-400">({users.length}{listQuery.hasNextPage ? "+" : ""})</div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -67,14 +62,17 @@ export default function UsersAdmin() {
                         onChange={(e) => setQuery(e.target.value)}
                         className="border px-2 py-1 rounded"
                     />
-                    <button onClick={fetchUsers} className="px-3 py-1 bg-blue-600 text-white rounded">Refresh</button>
+                    <button onClick={() => listQuery.refetch()} className="px-3 py-1 bg-blue-600 text-white rounded">Refresh</button>
                 </div>
             </div>
 
-            {loading ? (
-                <div>Loading users…</div>
-            ) : error ? (
-                <div className="text-red-500">{error}</div>
+            {listQuery.isLoading ? (
+                <span className="flex items-center gap-3">
+                    <Spinner />
+                    <p className="text-gray-400">Loading users…</p>
+                </span>
+            ) : listQuery.isError ? (
+                <div className="text-red-500">Failed to load users.</div>
             ) : filtered.length === 0 ? (
                 <div className="text-sm text-gray-400">No users found.</div>
             ) : (
@@ -83,7 +81,19 @@ export default function UsersAdmin() {
                         <div key={u._id} className="p-3 border rounded flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden grid place-items-center text-sm">
-                                    {u.image ? <Image src={u.image} alt={u.name ?? u.email} width={500} height={500} className="w-full h-full object-cover" /> : (u.name ? u.name.charAt(0).toUpperCase() : u.email.charAt(0).toUpperCase())}
+                                    {u.image ? (
+                                        <Image
+                                            src={u.image}
+                                            alt={u.name ?? u.email}
+                                            width={500}
+                                            height={500}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : u.name ? (
+                                        u.name.charAt(0).toUpperCase()
+                                    ) : (
+                                        u.email.charAt(0).toUpperCase()
+                                    )}
                                 </div>
                                 <div>
                                     <div className="font-semibold">{u.name ?? u.email}</div>
@@ -99,6 +109,11 @@ export default function UsersAdmin() {
                             </div>
                         </div>
                     ))}
+                    <LoadMoreSentinel
+                        sentinelRef={sentinelRef}
+                        isFetchingNextPage={listQuery.isFetchingNextPage}
+                        hasNextPage={listQuery.hasNextPage}
+                    />
                 </div>
             )}
         </div>

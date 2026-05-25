@@ -1,57 +1,55 @@
-// app/admin/tickets-admin.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useToast } from "@/components/toast-provider";
 import ConfirmModal from "@/components/confirm-modal";
 import TicketForm, { Ticket } from "./ticket-form";
 import Spinner from "@/components/spinner";
+import { trpc } from "@/trpc/react";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { LoadMoreSentinel } from "@/components/admin/load-more-sentinel";
 
 export default function TicketsAdmin() {
-    const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"active" | "archived" | "all">("active");
     const [editing, setEditing] = useState<Ticket | null>(null);
-
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [confirmState, setConfirmState] = useState<{ open: boolean; action: "archive" | "delete" | null; ticket?: Ticket | null; }>(
-        { open: false, action: null, ticket: null }
-    );
+    const [confirmState, setConfirmState] = useState<{
+        open: boolean;
+        action: "archive" | "delete" | null;
+        ticket?: Ticket | null;
+    }>({ open: false, action: null, ticket: null });
 
     const toast = useToast();
+    const utils = trpc.useUtils();
 
-    useEffect(() => {
-        fetchList();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filter]);
+    const listQuery = trpc.admin.tickets.list.useInfiniteQuery(
+        { status: filter, limit: 20 },
+        { getNextPageParam: (last) => last.nextCursor }
+    );
 
-    const fetchList = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch(`/api/admin/tickets?status=${filter === "all" ? "all" : filter}`, { cache: "no-store" });
-            if (!res.ok) throw new Error("Failed to fetch");
-            const data = await res.json();
-            setTickets(data.tickets ?? []);
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error(err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
-        } finally {
-            setLoading(false);
-        }
-    };
+    const tickets = useMemo(
+        () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+        [listQuery.data]
+    );
 
-    const onCreated = (ticket?: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const sentinelRef = useInfiniteScroll({
+        hasNextPage: listQuery.hasNextPage,
+        isFetchingNextPage: listQuery.isFetchingNextPage,
+        fetchNextPage: () => listQuery.fetchNextPage(),
+    });
+
+    const invalidate = () => void utils.admin.tickets.list.invalidate();
+
+    const onCreated = (ticket?: Ticket) => {
         toast.push({ title: "Created", message: `Ticket "${ticket?.name ?? "New"}" created`, level: "success" });
         setShowCreateModal(false);
-        if (ticket) setTickets((prev) => [ticket, ...prev]);
-        else fetchList();
+        invalidate();
     };
 
-    const onSaved = (ticket?: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const onSaved = (ticket?: Ticket) => {
         toast.push({ title: "Saved", message: `Ticket "${ticket?.name ?? ""}" updated`, level: "success" });
-        // optimistic update
-        if (ticket) setTickets((prev) => prev.map((t) => (t._id === ticket._id ? ticket : t)));
         setEditing(null);
+        invalidate();
     };
 
     const onArchiveClick = (ticket: Ticket) => {
@@ -74,7 +72,6 @@ export default function TicketsAdmin() {
                     body: JSON.stringify({ ticketId: ticket._id, status: "archived" }),
                 });
                 if (!res.ok) throw new Error("Archive failed");
-                setTickets((prev) => prev.map((t) => (t._id === ticket._id ? { ...t, status: "archived" } : t)));
                 toast.push({ title: "Archived", message: `Ticket "${ticket.name}" archived`, level: "info" });
             } else if (action === "delete") {
                 const res = await fetch("/api/admin/tickets", {
@@ -83,14 +80,30 @@ export default function TicketsAdmin() {
                     body: JSON.stringify({ ticketId: ticket._id, hard: true }),
                 });
                 if (!res.ok) throw new Error("Delete failed");
-                setTickets((prev) => prev.filter((t) => t._id !== ticket._id));
                 toast.push({ title: "Deleted", message: `Ticket "${ticket.name}" deleted`, level: "info" });
             }
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error(err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
+            invalidate();
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.push({ title: "Error", message, level: "error" });
         } finally {
             setConfirmState({ open: false, action: null, ticket: null });
+        }
+    };
+
+    const restore = async (t: Ticket) => {
+        try {
+            const res = await fetch("/api/admin/tickets", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketId: t._id, status: "active" }),
+            });
+            if (!res.ok) throw new Error("Restore failed");
+            toast.push({ title: "Restored", message: `Ticket "${t.name}" restored`, level: "success" });
+            invalidate();
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.push({ title: "Error", message, level: "error" });
         }
     };
 
@@ -104,7 +117,7 @@ export default function TicketsAdmin() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button onClick={fetchList} className="px-3 py-1 bg-blue-600 text-white rounded">Refresh</button>
+                    <button onClick={() => listQuery.refetch()} className="px-3 py-1 bg-blue-600 text-white rounded">Refresh</button>
                     <button onClick={() => setShowCreateModal(true)} className="px-3 py-1 bg-green-600 text-white rounded">Create Ticket</button>
                 </div>
             </div>
@@ -114,11 +127,13 @@ export default function TicketsAdmin() {
             </div>
 
             <div>
-                {loading ? (
+                {listQuery.isLoading ? (
                     <span className="flex items-center gap-3">
                         <Spinner />
                         <p className="ml-2 text-gray-400">Loading tickets...</p>
                     </span>
+                ) : listQuery.isError ? (
+                    <div className="text-sm text-red-400">Failed to load tickets.</div>
                 ) : tickets.length === 0 ? (
                     <div className="text-sm text-gray-400">No tickets found.</div>
                 ) : (
@@ -129,46 +144,32 @@ export default function TicketsAdmin() {
                                     <div className="font-semibold">
                                         {t.name} <span className="text-xs text-gray-400">({t.status})</span>
                                     </div>
-                                    <div className="text-sm text-gray-400">
-                                        ID: {t._id}
-                                    </div>
+                                    <div className="text-sm text-gray-400">ID: {t._id}</div>
                                     <div className="text-sm text-gray-600">
-                                        {(t.price).toFixed(2)} {t.currency} • {Math.max(0, t.quantity - (t.sold ?? 0))} left
+                                        {t.price.toFixed(2)} {t.currency} • {Math.max(0, t.quantity - (t.sold ?? 0))} left
                                     </div>
                                 </div>
 
                                 <div className="flex gap-2">
                                     <button onClick={() => setEditing(t)} className="px-2 py-1 bg-white/10 rounded">Edit</button>
-
                                     {t.status !== "archived" ? (
                                         <button onClick={() => onArchiveClick(t)} className="px-2 py-1 bg-yellow-600 rounded text-black">Archive</button>
                                     ) : (
-                                        <button onClick={async () => {
-                                            // quick restore
-                                            try {
-                                                const res = await fetch("/api/admin/tickets", {
-                                                    method: "PATCH",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({ ticketId: t._id, status: "active" }),
-                                                });
-                                                if (!res.ok) throw new Error("Restore failed");
-                                                setTickets((prev) => prev.map((x) => (x._id === t._id ? { ...x, status: "active" } : x)));
-                                                toast.push({ title: "Restored", message: `Ticket "${t.name}" restored`, level: "success" });
-                                            } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-                                                toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
-                                            }
-                                        }} className="px-2 py-1 bg-green-600 rounded text-white">Restore</button>
+                                        <button onClick={() => restore(t)} className="px-2 py-1 bg-green-600 rounded text-white">Restore</button>
                                     )}
-
                                     <button onClick={() => onDeleteClick(t)} className="px-2 py-1 bg-red-600 rounded text-white">Delete</button>
                                 </div>
                             </div>
                         ))}
+                        <LoadMoreSentinel
+                            sentinelRef={sentinelRef}
+                            isFetchingNextPage={listQuery.isFetchingNextPage}
+                            hasNextPage={listQuery.hasNextPage}
+                        />
                     </div>
                 )}
             </div>
 
-            {/* Create modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="bg-white text-black rounded p-4 w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-auto" onClick={(e) => e.stopPropagation()}>
@@ -176,13 +177,11 @@ export default function TicketsAdmin() {
                             <h4 className="font-semibold">Create Ticket</h4>
                             <button onClick={() => setShowCreateModal(false)} className="text-gray-600">✕</button>
                         </div>
-
                         <TicketForm onSaved={onCreated} onCancel={() => setShowCreateModal(false)} submitLabel="Create ticket" />
                     </div>
                 </div>
             )}
 
-            {/* Edit modal */}
             {editing && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div
@@ -193,13 +192,11 @@ export default function TicketsAdmin() {
                             <h4 className="font-semibold">Edit Ticket</h4>
                             <button onClick={() => setEditing(null)} className="text-gray-600">✕</button>
                         </div>
-
                         <TicketForm initial={editing} onSaved={onSaved} onCancel={() => setEditing(null)} submitLabel="Save changes" />
                     </div>
                 </div>
             )}
 
-            {/* Confirm modal */}
             <ConfirmModal
                 open={confirmState.open}
                 title={confirmState.action === "archive" ? "Archive ticket?" : "Delete ticket?"}
