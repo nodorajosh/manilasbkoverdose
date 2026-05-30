@@ -11,6 +11,7 @@ const CartSchema = new Schema(
                 ticketId: { type: Schema.Types.ObjectId, ref: "Ticket", required: true },
                 quantity: { type: Number, default: 1 },
                 discountCode: { type: String, default: null },
+                discountedPrice: { type: Number, default: null },
             },
         ],
     },

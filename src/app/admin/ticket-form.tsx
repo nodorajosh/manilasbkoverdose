@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import NextImage from "next/image";
 import { useToast } from "@/components/toast-provider";
 
 import { RichTextEditor } from "@/components/rich-text-editor";
@@ -229,8 +230,8 @@ export default function TicketForm({
                 <label className="block text-sm">Thumbnail (16:9, ≤ 500KB)</label>
                 <input type="file" accept="image/*" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
                 {thumbnail && (
-                    <div className="mt-2">
-                        <img src={thumbnail.dataUrl} alt="thumb" style={{ width: 213, height: 120, objectFit: "cover" }} />
+                    <div className="mt-2 relative" style={{ width: 213, height: 120 }}>
+                        <NextImage src={thumbnail.dataUrl} alt="thumb" fill unoptimized className="object-cover" />
                         <div className="text-sm">Size: {(thumbnail.size / 1024).toFixed(1)} KB</div>
                     </div>
                 )}

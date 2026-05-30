@@ -9,7 +9,6 @@ import { useSession } from "next-auth/react";
 import { useCartContext } from "@/contexts/CartContext";
 import Hero from "./hero";
 
-import Spinner from "@/components/spinner";
 import PayWithPayPalButton from "@/components/pay-with-paypal-button";
 
 import { useToast } from "@/components/toast-provider";
@@ -74,6 +73,9 @@ export default function Main() {
     const [validatingTicketId, setValidatingTicketId] = useState<string | null>(null);
     const [discountInfo, setDiscountInfo] = useState<Record<string, { discountedPrice: number; code: string } | undefined>>({});
     const [validateErrors, setValidateErrors] = useState<Record<string, string>>({});
+
+    // per-ticket loading state to prevent double-clicks
+    const [addingToCart, setAddingToCart] = useState<Record<string, boolean>>({});
 
     // Fetch tickets
     useEffect(() => {
@@ -210,10 +212,36 @@ export default function Main() {
         });
     };
 
-    // Add to cart handler: uses chosen quantity
-    const handleAddToCart = (ticket: TicketType, discountCode: string | null = null, discountedPrice: number | null = null) => {
-        const desired = Math.max(1, Number(quantities[ticket._id] ?? 1));
-        addToCart(ticket.name, discountedPrice ? discountedPrice : ticket.price, ticket.currency, ticket._id, desired, discountCode);
+    // Add to cart handler: uses chosen quantity, prevents double-clicks
+    const handleAddToCart = async (ticket: TicketType, discountCode: string | null = null, discountedPrice: number | null = null) => {
+        const ticketId = ticket._id;
+        if (addingToCart[ticketId]) return; // prevent double-click
+
+        setAddingToCart((prev) => ({ ...prev, [ticketId]: true }));
+        try {
+            const desired = Math.max(1, Number(quantities[ticketId] ?? 1));
+            await addToCart(
+                ticket.name,
+                discountedPrice ? discountedPrice : ticket.price,
+                ticket.currency,
+                ticketId,
+                desired,
+                discountCode
+            );
+            toast.push({
+                title: "Added to Cart",
+                message: `${ticket.name} (×${desired}) has been added to your cart.`,
+                level: "success",
+            });
+        } catch {
+            toast.push({
+                title: "Failed",
+                message: "Could not add item to cart. Please try again.",
+                level: "error",
+            });
+        } finally {
+            setAddingToCart((prev) => ({ ...prev, [ticketId]: false }));
+        }
     };
 
     const validateCode = async (ticketId: string, code: string) => {
@@ -249,10 +277,26 @@ export default function Main() {
             <Hero />
             <div className="w-full h-full px-6 py-12 flex flex-col justify-center items-center">
                 {loading && (
-                    <span className="flex items-center gap-3">
-                        <Spinner />
-                        <p className="ml-2 text-gray-400">Loading tickets...</p>
-                    </span>
+                    <div className="w-full max-w-7xl animate-pulse">
+                        <div className="h-8 w-48 rounded-lg bg-gray-800 mx-auto mb-10" />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+                                    <div className="h-48 w-full bg-gray-800" />
+                                    <div className="p-4 space-y-3">
+                                        <div className="h-5 w-3/4 rounded bg-gray-800" />
+                                        <div className="h-4 w-full rounded bg-gray-800" />
+                                        <div className="h-4 w-2/3 rounded bg-gray-800" />
+                                        <div className="h-6 w-1/4 rounded bg-gray-800" />
+                                        <div className="flex gap-2 pt-2">
+                                            <div className="h-10 flex-1 rounded-full bg-gray-800" />
+                                            <div className="h-10 w-20 rounded-full bg-gray-800" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 )}
 
                 {error && <p className="text-red-500">{error}</p>}
@@ -281,11 +325,13 @@ export default function Main() {
                                                         >
                                                             <div>
                                                                 {ticket.thumbnail?.dataUrl ? (
-                                                                    <div className="mb-3 w-full flex justify-center">
-                                                                        <img
+                                                                    <div className="mb-3 w-full flex justify-center relative aspect-video">
+                                                                        <Image
                                                                             src={ticket.thumbnail.dataUrl}
                                                                             alt={`${ticket.name} thumbnail`}
-                                                                            className="w-full aspect-video object-cover rounded-t-2xl"
+                                                                            fill
+                                                                            unoptimized
+                                                                            className="object-cover rounded-t-2xl"
                                                                         />
                                                                     </div>
                                                                 ) : null}
@@ -298,7 +344,18 @@ export default function Main() {
                                                                     </p>}
 
                                                                 <div className="px-4 flex items-baseline gap-2">
-                                                                    <div className="text-xl font-bold">${ticket.price}</div>
+                                                                    {discountInfo[ticket._id]?.discountedPrice !== undefined ? (
+                                                                        <>
+                                                                            <div className="text-xl font-bold text-gray-400 line-through">
+                                                                                ${ticket.price}
+                                                                            </div>
+                                                                            <div className="text-xl font-bold text-peach-200">
+                                                                                ${discountInfo[ticket._id]!.discountedPrice.toFixed(2)}
+                                                                            </div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <div className="text-xl font-bold">${ticket.price}</div>
+                                                                    )}
                                                                     <div className="text-sm text-gray-400"> {ticket.currency}</div>
                                                                 </div>
 
@@ -352,18 +409,13 @@ export default function Main() {
                                                                     </div>
 
                                                                     {validateErrors[ticket._id] && <div className="text-xs text-red-500">{validateErrors[ticket._id]}</div>}
-                                                                    {discountInfo[ticket._id] && discountInfo[ticket._id]?.discountedPrice !== undefined && (
-                                                                        <div className="text-sm text-green-600">
-                                                                            Discounted: <strong>${discountInfo[ticket._id]!.discountedPrice.toFixed(2)}</strong>
-                                                                        </div>
-                                                                    )}
 
                                                                     <button
                                                                         onClick={() => handleAddToCart(ticket, discountInfo[ticket._id]?.code ?? null, discountInfo[ticket._id]?.discountedPrice ?? null)}
-                                                                        className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
-                                                                        disabled={remaining === 0}
+                                                                        className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 || addingToCart[ticket._id] ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
+                                                                        disabled={remaining === 0 || addingToCart[ticket._id]}
                                                                     >
-                                                                        Add to Cart
+                                                                        {addingToCart[ticket._id] ? "Adding…" : "Add to Cart"}
                                                                     </button>
 
                                                                     <PayWithPayPalButton

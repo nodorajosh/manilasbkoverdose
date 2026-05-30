@@ -16,6 +16,8 @@ export type CartItem = {
 
 type CartContextType = {
     cart: CartItem[];
+    isCartOpen: boolean;
+    setCartOpen: (open: boolean) => void;
     addToCart: (name: string, price: number, currency: string, ticketId: string, quantity?: number, discountCode?: string | null, discountedPrice?: number | null) => Promise<void>;
     removeFromCart: (ticketId: string) => Promise<void>;
     clearCart: () => Promise<void>;
@@ -27,6 +29,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
     const [cart, setCart] = useState<CartItem[]>([]);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -56,26 +59,53 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }, [cart, session]);
 
     const addToCart = useCallback(
-        async (ticketName: string, ticketPrice: number, ticketCurrency: string, ticketId: string, quantity = 1, discountCode: string | null = null) => {
+        async (ticketName: string, ticketPrice: number, ticketCurrency: string, ticketId: string, quantity = 1, discountCode: string | null = null, discountedPrice: number | null = null) => {
             if (session?.user) {
-                // include discount info in server payload
                 await fetch("/api/cart", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ticketId, ticketName, ticketPrice, ticketCurrency, quantity, discountCode }),
+                    body: JSON.stringify({ ticketId, ticketName, ticketPrice, ticketCurrency, quantity, discountCode, discountedPrice }),
                 });
                 const res = await fetch("/api/cart");
                 const data = await res.json();
                 setCart(data.items ?? []);
             } else {
                 setCart((prev) => {
+                    // If adding with a discount code, apply it to ALL entries of the same ticket
+                    if (discountCode) {
+                        const sameTicketEntries = prev.filter((p) => p.ticketId === ticketId);
+                        const otherEntries = prev.filter((p) => p.ticketId !== ticketId);
+
+                        // Sum all quantities from same-ticket entries plus the new quantity
+                        const totalQty = sameTicketEntries.reduce((sum, p) => sum + p.quantity, 0) + quantity;
+
+                        return [
+                            ...otherEntries,
+                            {
+                                ticketName,
+                                ticketPrice,
+                                ticketCurrency,
+                                ticketId,
+                                quantity: totalQty,
+                                discountCode,
+                                discountedPrice,
+                            },
+                        ];
+                    }
+
+                    // No discount — just increment or add as before
                     const found = prev.find((p) => p.ticketId === ticketId && p.discountCode === discountCode);
                     if (found) {
-                        return prev.map((p) => (p.ticketId === ticketId && p.discountCode === discountCode ? { ...p, quantity: p.quantity + quantity } : p));
+                        return prev.map((p) =>
+                            p.ticketId === ticketId && p.discountCode === discountCode
+                                ? { ...p, quantity: p.quantity + quantity }
+                                : p
+                        );
                     }
-                    return [...prev, { ticketName, ticketPrice, ticketCurrency, ticketId, quantity, discountCode: discountCode ?? null }];
+                    return [...prev, { ticketName, ticketPrice, ticketCurrency, ticketId, quantity, discountCode: null, discountedPrice: null }];
                 });
             }
+            setIsCartOpen(true); // auto-open cart after adding
         },
         [session]
     );
@@ -166,7 +196,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
 
     return (
-        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity }}>
+        <CartContext.Provider value={{ cart, isCartOpen, setCartOpen: setIsCartOpen, addToCart, removeFromCart, clearCart, updateQuantity }}>
             {children}
         </CartContext.Provider>
     );

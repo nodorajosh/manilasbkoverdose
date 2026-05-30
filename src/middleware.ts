@@ -12,6 +12,11 @@ export default withAuth({
                 return token?.role === "admin";
             }
 
+            // user / account paths require authentication
+            if (url.startsWith("/user")) {
+                return !!token;
+            }
+
             // dashboard requires authenticated user
             if (url.startsWith("/dashboard")) {
                 return !!token;
@@ -24,5 +29,5 @@ export default withAuth({
 });
 
 export const config = {
-    matcher: ["/dashboard/:path*", "/admin/:path*"],
+    matcher: ["/dashboard/:path*", "/admin/:path*", "/user/:path*"],
 };

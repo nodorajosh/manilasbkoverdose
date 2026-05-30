@@ -10,6 +10,8 @@ type CartItem = {
     ticketCurrency: string;
     ticketId: string;
     quantity: number;
+    discountCode?: string | null;
+    discountedPrice?: number | null;
 };
 
 // 🛒 GET - Fetch the logged-in user's cart
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { ticketName, ticketPrice, ticketCurrency, ticketId, quantity = 1, discountCode = null } = body;
+        const { ticketName, ticketPrice, ticketCurrency, ticketId, quantity = 1, discountCode = null, discountedPrice = null } = body;
 
         if (!ticketId) {
             return NextResponse.json({ error: "ticketId is required" }, { status: 400 });
@@ -65,22 +67,49 @@ export async function POST(req: Request) {
             cart = new Cart({ userId: session.user.email, items: [] });
         }
 
-        // Find existing item
-        const existingItem = cart.items.find(
-            (item: CartItem) => item.ticketId.toString() === ticketId
-        );
+        if (discountCode) {
+            // When adding with a discount code, apply it to ALL entries of the same ticket
+            const sameTicketEntries = cart.items.filter(
+                (item: CartItem) => item.ticketId.toString() === ticketId
+            );
+            const otherEntries = cart.items.filter(
+                (item: CartItem) => item.ticketId.toString() !== ticketId
+            );
 
-        if (existingItem) {
-            existingItem.quantity += quantity;
+            // Sum quantities from all same-ticket entries plus the new quantity
+            const totalQty = sameTicketEntries.reduce((sum: number, item: CartItem) => sum + item.quantity, 0) + quantity;
+
+            cart.items = [
+                ...otherEntries,
+                {
+                    ticketName,
+                    ticketPrice,
+                    ticketCurrency,
+                    ticketId: objectId,
+                    quantity: totalQty,
+                    discountCode,
+                    discountedPrice,
+                },
+            ];
         } else {
-            cart.items.push({
-                ticketName,
-                ticketPrice,
-                ticketCurrency,
-                ticketId: objectId,
-                quantity,
-                discountCode,
-            });
+            // No discount — find existing entry with matching ticketId and no discount code
+            const existingItem = cart.items.find(
+                (item: CartItem) => item.ticketId.toString() === ticketId && !item.discountCode
+            );
+
+            if (existingItem) {
+                existingItem.quantity += quantity;
+            } else {
+                cart.items.push({
+                    ticketName,
+                    ticketPrice,
+                    ticketCurrency,
+                    ticketId: objectId,
+                    quantity,
+                    discountCode: null,
+                    discountedPrice: null,
+                });
+            }
         }
 
         await cart.save();
