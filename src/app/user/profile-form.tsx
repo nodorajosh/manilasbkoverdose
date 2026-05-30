@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
+import { trpc } from "@/trpc/react";
 import { useToast } from "@/components/toast-provider";
 import Spinner from "@/components/spinner";
 
@@ -250,12 +251,11 @@ export default function ProfileForm() {
     const router = useRouter();
 
     const { id } = useParams();
+    const email = typeof id === "string" ? id : undefined;
 
     const toast = useToast();
 
     const [loading, setLoading] = useState(false);
-    const [initialLoading, setInitialLoading] = useState(true);
-
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [countryCode, setCountryCode] = useState<string>("+63"); // default PH
@@ -276,42 +276,37 @@ export default function ProfileForm() {
         }
     }, []);
 
-    const load = async () => {
-        setInitialLoading(true);
-        try {
-            const res = await fetch(id ? `/api/user/profile/${id}` : "/api/user/profile");
-            if (!res.ok) throw new Error("Failed to load profile");
-            const data = await res.json();
-            const u = data.user;
-            setFirstName(u.firstName ?? "");
-            setLastName(u.lastName ?? "");
-            // parse phone into dial and local if possible
-            if (u.phone) {
-                // try to find prefix match from our list
-                const matched = COUNTRY_CODES.find((c) => u.phone.startsWith(c.dial_code));
-                if (matched) {
-                    setCountryCode(matched.dial_code);
-                    setPhoneLocal(u.phone.slice(matched.dial_code.length).trim());
-                } else {
-                    // fallback: set local full
-                    setPhoneLocal(u.phone);
-                }
-            }
-            setDateOfBirth(u.dateOfBirth ? u.dateOfBirth.substring(0, 10) : "");
-            setAddress(u.address ?? { line1: "", city: "", state: "", zip: "", country: "" });
-            setImage(u.image ?? null);
-        } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error(err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
-        } finally {
-            setInitialLoading(false);
-        }
-    };
+    // ------ Fetch profile via tRPC ------
+    const ownProfileQuery = trpc.user.profile.get.useQuery(undefined, {
+        enabled: !email,
+    });
+    const adminProfileQuery = trpc.user.profile.getByEmail.useQuery(
+        { email: email! },
+        { enabled: !!email },
+    );
+
+    const profileData = email ? adminProfileQuery.data?.user : ownProfileQuery.data?.user;
 
     useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        if (!profileData) return;
+        const u = profileData;
+        setFirstName(u.firstName ?? "");
+        setLastName(u.lastName ?? "");
+        if (u.phone) {
+            const matched = COUNTRY_CODES.find((c) => u.phone!.startsWith(c.dial_code));
+            if (matched) {
+                setCountryCode(matched.dial_code);
+                setPhoneLocal(u.phone!.slice(matched.dial_code.length).trim());
+            } else {
+                setPhoneLocal(u.phone!);
+            }
+        }
+        setDateOfBirth(u.dateOfBirth ? u.dateOfBirth.substring(0, 10) : "");
+        setAddress((u.address ?? { line1: "", city: "", state: "", zip: "", country: "" }) as Address);
+        setImage(u.image ?? null);
+    }, [profileData]);
+
+    const profileLoading = email ? adminProfileQuery.isLoading : ownProfileQuery.isLoading;
 
     const onFile = (f?: File | null) => {
         if (!f) return;
@@ -323,43 +318,52 @@ export default function ProfileForm() {
         reader.readAsDataURL(f);
     };
 
+    // ------ Update profile via tRPC ------
+    const ownUpdateMutation = trpc.user.profile.update.useMutation({
+        onSuccess: () => {
+            toast.push({ title: "Saved", message: "Profile updated", level: "success" });
+            router.refresh();
+        },
+        onError: (err) => {
+            toast.push({ title: "Error", message: err.message ?? "Failed to save", level: "error" });
+        },
+    });
+    const adminUpdateMutation = trpc.user.profile.updateByEmail.useMutation({
+        onSuccess: () => {
+            toast.push({ title: "Saved", message: "Profile updated", level: "success" });
+            router.refresh();
+        },
+        onError: (err) => {
+            toast.push({ title: "Error", message: err.message ?? "Failed to save", level: "error" });
+        },
+    });
+
     const submit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        setLoading(true);
+        if (loading) return;
 
         // simple validation
         if (!firstName || !lastName || !phoneLocal || !dateOfBirth || !address.line1 || !address.city || !address.zip || !address.country) {
             toast.push({ title: "Missing fields", message: "Please fill all required fields before saving.", level: "warning" });
-            setLoading(false);
             return;
         }
 
-        try {
-            const payload = {
-                firstName,
-                lastName,
-                phone: `${countryCode} ${phoneLocal}`.trim(),
-                dateOfBirth,
-                address,
-                image,
-            };
-            const res = await fetch(id ? `/api/user/profile/${id}` : "/api/user/profile", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
+        const payload = {
+            firstName,
+            lastName,
+            phone: `${countryCode} ${phoneLocal}`.trim(),
+            dateOfBirth,
+            address,
+            image,
+        };
 
-            const data = await res.json();
-            if (!res.ok) {
-                const err = data?.error?.message || JSON.stringify(data?.error) || "Failed to save";
-                throw new Error(err);
+        setLoading(true);
+        try {
+            if (email) {
+                await adminUpdateMutation.mutateAsync({ email, ...payload });
+            } else {
+                await ownUpdateMutation.mutateAsync(payload);
             }
-            toast.push({ title: "Saved", message: "Profile updated", level: "success" });
-            // if privacy modal still open and user accepted, we mark it accepted
-            router.refresh(); // refresh data on page
-        } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error("Profile save error:", err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
         } finally {
             setLoading(false);
         }
@@ -388,7 +392,7 @@ export default function ProfileForm() {
                 </button>
             </div>
 
-            {initialLoading ? (
+            {profileLoading ? (
                 <span className="flex items-center gap-3">
                     <Spinner />
                     <p className="ml-2 text-gray-400">Loading profile...</p>

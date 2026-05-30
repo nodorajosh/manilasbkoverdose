@@ -1,10 +1,11 @@
 // components/user/OrdersList.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { trpc } from "@/trpc/react";
 import { useToast } from "@/components/toast-provider";
 import ConfirmModal from "@/components/confirm-modal";
 import Spinner from "@/components/spinner";
@@ -16,15 +17,54 @@ type Order = {
     totalAmount: number;
     currency: string;
     items: OrderItem[];
-    createdAt: string;
+    createdAt: string | null;
 };
 
 export default function OrdersList() {
     const { id } = useParams();
+    const email = typeof id === "string" ? id : undefined;
 
     const toast = useToast();
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [loading, setLoading] = useState(true);
+
+    // ------ Data fetching via tRPC ------
+    const userOrdersQuery = trpc.user.orders.list.useQuery(undefined, {
+        enabled: !email,
+    });
+    const adminOrdersQuery = trpc.user.orders.listByUserEmail.useQuery(
+        { email: email! },
+        { enabled: !!email },
+    );
+
+    const cancelMutation = trpc.user.orders.cancel.useMutation({
+        onSuccess: (data) => {
+            // update the local list optimistically
+            const updated = data.order;
+            if (updated) {
+                if (email) {
+                    adminOrdersQuery.refetch();
+                } else {
+                    userOrdersQuery.refetch();
+                }
+                toast.push({
+                    title: "Updated",
+                    message: `Order ${updated._id} set to "${updated.status}"`,
+                    level: "success",
+                });
+            }
+        },
+        onError: (err) => {
+            toast.push({
+                title: "Error",
+                message: err.message ?? "Failed to cancel order",
+                level: "error",
+            });
+        },
+    });
+
+    const loading = email ? adminOrdersQuery.isLoading : userOrdersQuery.isLoading;
+    const orders: Order[] = email
+        ? (adminOrdersQuery.data?.orders ?? [])
+        : (userOrdersQuery.data?.orders ?? []);
 
     // confirmation modal state
     const [confirm, setConfirm] = useState<{ open: boolean; order?: Order | null; action?: string | null }>({
@@ -36,66 +76,22 @@ export default function OrdersList() {
     // id of order currently being acted on
     const [actionPending, setActionPending] = useState<string | null>(null);
 
-    const fetchOrders = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch(id ? `/api/user/orders/${id}` : "/api/user/orders");
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err?.error || "Failed to fetch orders");
-            }
-            const data = await res.json();
-            setOrders(data.orders ?? []);
-        } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error(err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchOrders();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
     const openCancelConfirm = (order: Order) => {
         setConfirm({ open: true, order, action: "cancelled" });
     };
 
     const closeConfirm = () => setConfirm({ open: false, order: null, action: null });
 
-    // perform status update (for users, cancel their own order)
-    const performUpdate = async (orderId: string, status: string) => {
+    const handleConfirm = async () => {
+        if (!confirm.order || !confirm.action) return closeConfirm();
+        const orderId = confirm.order._id;
         setActionPending(orderId);
         try {
-            const res = await fetch(id ? `/api/user/orders/${id}` : "/api/user/orders", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId, status }),
-            });
-            const payload = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                const msg = payload?.error || payload?.message || "Failed to update order";
-                throw new Error(msg);
-            }
-
-            // update local list
-            setOrders((prev) => prev.map((o) => (o._id === orderId ? { ...o, status } : o)));
-
-            toast.push({ title: "Updated", message: `Order ${orderId} set to "${status}"`, level: "success" });
-        } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error("performUpdate error:", err);
-            toast.push({ title: "Error", message: String(err?.message ?? err), level: "error" });
+            await cancelMutation.mutateAsync({ orderId });
         } finally {
             setActionPending(null);
             closeConfirm();
         }
-    };
-
-    const handleConfirm = async () => {
-        if (!confirm.order || !confirm.action) return closeConfirm();
-        await performUpdate(confirm.order._id, confirm.action);
     };
 
     return (
@@ -120,7 +116,7 @@ export default function OrdersList() {
                                     >
                                         <div>
                                             <div className="font-semibold">Order {o._id}</div>
-                                            <div className="text-sm text-gray-400">{new Date(o.createdAt).toLocaleString()}</div>
+                                            <div className="text-sm text-gray-400">{o.createdAt ? new Date(o.createdAt).toLocaleString() : ""}</div>
 
                                         </div>
                                         <div className="text-right">

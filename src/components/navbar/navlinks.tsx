@@ -17,6 +17,7 @@ export default function Navlinks() {
     const { isCartOpen, setCartOpen } = useCartContext();
 
     const cartRef = useRef<HTMLDivElement | null>(null);
+    const menuRef = useRef<HTMLLIElement | null>(null);
     const menuCheckboxRef = useRef<HTMLInputElement | null>(null);
 
     const closeMenu = () => {
@@ -24,6 +25,24 @@ export default function Navlinks() {
             menuCheckboxRef.current.checked = false;
         }
     };
+
+    // Close nav menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (
+                menuCheckboxRef.current?.checked &&
+                menuRef.current &&
+                !menuRef.current.contains(event.target as Node)
+            ) {
+                menuCheckboxRef.current.checked = false;
+            }
+        }
+
+        document.addEventListener("click", handleClickOutside, { capture: true });
+        return () => {
+            document.removeEventListener("click", handleClickOutside, { capture: true });
+        };
+    }, []);
 
     const navlinks = [
         {
@@ -75,7 +94,7 @@ export default function Navlinks() {
 
             {/* User avatar if logged in */}
             {session?.user ? (
-                <li className="ml-2 relative">
+                <li ref={menuRef} className="ml-2 relative">
                     <input
                         ref={menuCheckboxRef}
                         type="checkbox"
@@ -123,7 +142,7 @@ export default function Navlinks() {
                     </div>
                 </li>
             ) : (
-                <li className="px-4 flex items-center justify-center relative">
+                <li ref={menuRef} className="px-4 flex items-center justify-center relative">
                     <input
                         ref={menuCheckboxRef}
                         type="checkbox"
