@@ -1,209 +1,188 @@
-"use client"
+"use client";
 
-import { useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-
-import { useSession, signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 import { useCartContext } from "@/contexts/CartContext";
 import CA from "../../assets/images/cart.svg";
 import CartSidebar from "../cart";
 
+const navlinks = [
+    { title: "Trailer", link: "/#trailer" },
+    { title: "Artists", link: "/#artists" },
+];
+
+function ChevronIcon({ open }: { open: boolean }) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="1.8"
+        >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+        </svg>
+    );
+}
+
+function MenuIcon({ open }: { open: boolean }) {
+    return (
+        <span className="relative block h-5 w-5" aria-hidden="true">
+            <span className={`absolute left-0 top-1 block h-px w-5 bg-current transition-transform duration-200 ${open ? "translate-y-2 rotate-45" : ""}`} />
+            <span className={`absolute left-0 top-3 block h-px w-5 bg-current transition-opacity duration-200 ${open ? "opacity-0" : ""}`} />
+            <span className={`absolute left-0 top-5 block h-px w-5 bg-current transition-transform duration-200 ${open ? "-translate-y-2 -rotate-45" : ""}`} />
+        </span>
+    );
+}
 
 export default function Navlinks() {
     const { data: session } = useSession();
+    const { cart, isCartOpen, setCartOpen } = useCartContext();
+    const [isMenuOpen, setMenuOpen] = useState(false);
+    const [isAccountOpen, setAccountOpen] = useState(false);
+    const navRef = useRef<HTMLDivElement | null>(null);
+    const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
 
-    const { isCartOpen, setCartOpen } = useCartContext();
-
-    const cartRef = useRef<HTMLDivElement | null>(null);
-    const menuRef = useRef<HTMLLIElement | null>(null);
-    const menuCheckboxRef = useRef<HTMLInputElement | null>(null);
-
-    const closeMenu = () => {
-        if (menuCheckboxRef.current) {
-            menuCheckboxRef.current.checked = false;
-        }
-    };
-
-    // Close nav menu when clicking outside
     useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (
-                menuCheckboxRef.current?.checked &&
-                menuRef.current &&
-                !menuRef.current.contains(event.target as Node)
-            ) {
-                menuCheckboxRef.current.checked = false;
-            }
-        }
-
-        document.addEventListener("click", handleClickOutside, { capture: true });
-        return () => {
-            document.removeEventListener("click", handleClickOutside, { capture: true });
-        };
-    }, []);
-
-    const navlinks = [
-        {
-            title: "Trailer",
-            link: "/#trailer"
-        },
-        {
-            title: "Artists",
-            link: "/#artists"
-        },
-    ]
-
-    const getInitials = (name?: string | null) => {
-        if (!name) return "";
-        const parts = name.trim().split(" ");
-        if (parts.length === 1) return parts[0][0]?.toUpperCase();
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    };
-
-    // Close cart sidebar when clicking outside
-    useEffect(() => {
-        function handleClick(event: MouseEvent) {
-            if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setMenuOpen(false);
+                setAccountOpen(false);
                 setCartOpen(false);
             }
-        }
+        };
+        const handleClickOutside = (event: MouseEvent) => {
+            if (navRef.current && !navRef.current.contains(event.target as Node)) {
+                setMenuOpen(false);
+                setAccountOpen(false);
+            }
+        };
 
-        window?.addEventListener("click", handleClick, { capture: true });
+        document.addEventListener("keydown", handleKeyDown);
+        document.addEventListener("click", handleClickOutside, true);
         return () => {
-            window?.removeEventListener("click", handleClick, { capture: true });
+            document.removeEventListener("keydown", handleKeyDown);
+            document.removeEventListener("click", handleClickOutside, true);
         };
     }, [setCartOpen]);
 
-    return (
-        <ul className="px-2 py-1 flex flex-wrap justify-center content-center relative bg-gray-50/20 dark:bg-gray-950/20 shadow backdrop-blur-[7.5px] border-[1px] border-gray-50/10 dark:border-gray-950/10 rounded text-white">
-            {navlinks.map((navlink) => (
-                <li
-                    key={navlink.title}
-                    className="w-[70px] md:w-[120px] lg:w-[140px] xl:w-[180px] grid place-items-center"
-                >
-                    <Link href={navlink.link}>{navlink.title}</Link>
-                </li>
-            ))}
-            <li className="w-[70px] md:w-[120px] lg:w-[140px] xl:w-[180px] grid place-items-center">
-                <Link href="/tickets" className="px-3 cta cta-solid rounded w-full grid place-items-center">
-                    <span className="h3">Tickets</span>
-                </Link>
-            </li>
+    const closeMenus = () => {
+        setMenuOpen(false);
+        setAccountOpen(false);
+    };
 
-            {/* User avatar if logged in */}
+    const getInitials = (name?: string | null) => {
+        if (!name) return "U";
+        const parts = name.trim().split(" ").filter(Boolean);
+        if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "U";
+        return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+    };
+
+    return (
+        <div ref={navRef} className="relative flex items-center gap-2 text-white">
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+                {navlinks.map((navlink) => (
+                    <Link
+                        key={navlink.title}
+                        href={navlink.link}
+                        className="rounded-full px-4 py-2 text-[.68rem] font-semibold uppercase tracking-[.16em] text-white/65 transition hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                    >
+                        {navlink.title}
+                    </Link>
+                ))}
+                <Link href="/tickets" className="cta cta-solid ml-2 px-5 py-2.5 text-[.68rem] uppercase tracking-[.16em]">
+                    Tickets
+                </Link>
+            </nav>
+
+            <button
+                type="button"
+                onClick={() => setCartOpen(true)}
+                className="focus-ring relative grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/75 transition hover:border-[#f3d78a]/60 hover:bg-white/10 hover:text-white"
+                aria-label={`Open cart${cartCount ? `, ${cartCount} item${cartCount === 1 ? "" : "s"}` : ""}`}
+            >
+                <Image src={CA} alt="" width={17} height={17} />
+                {cartCount > 0 && <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#f3d78a] px-1 text-[.62rem] font-bold text-[#241507]">{cartCount}</span>}
+            </button>
+
             {session?.user ? (
-                <li ref={menuRef} className="ml-2 relative">
-                    <input
-                        ref={menuCheckboxRef}
-                        type="checkbox"
-                        id="nav-menu-toggle"
-                        className="peer hidden"
-                    />
-                    {/* Click-outside overlay — clicking anywhere closes the menu */}
-                    <label
-                        htmlFor="nav-menu-toggle"
-                        className="hidden peer-checked:fixed peer-checked:inset-0 peer-checked:z-40 cursor-default"
-                        aria-hidden="true"
-                    />
-                    {/* Trigger */}
-                    <label
-                        htmlFor="nav-menu-toggle"
-                        className="relative z-50 w-6 h-6 rounded-full bg-white text-black flex items-center justify-center font-bold overflow-hidden cursor-pointer"
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setAccountOpen((open) => !open)}
+                        className="focus-ring flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[.04] px-1.5 pr-3 transition hover:border-[#f3d78a]/60 hover:bg-white/10"
+                        aria-expanded={isAccountOpen}
+                        aria-haspopup="menu"
+                        aria-label="Open account menu"
                     >
-                        {session.user.image ? (
-                            <Image
-                                src={session.user.image as string}
-                                alt={session.user.name as string || "User"}
-                                width={40}
-                                height={40}
-                                className="w-6 h-6 rounded-full object-cover"
-                            />
-                        ) : (
-                            <span>{getInitials(session.user.name)}</span>
-                        )}
-                    </label>
-                    {/* Dropdown menu — animated with opacity + scale + slide */}
-                    <div className="absolute top-9 right-0 z-50 px-4 py-8 w-max rounded bg-gray-50/20 dark:bg-gray-950/20 shadow backdrop-blur-[7.5px] border-[1px] border-gray-50/10 dark:border-gray-950/10 opacity-0 scale-95 -translate-y-2 pointer-events-none peer-checked:opacity-100 peer-checked:scale-100 peer-checked:translate-y-0 peer-checked:pointer-events-auto transition-all duration-300 ease-out transform-gpu">
-                        <ul className="flex flex-col gap-4">
-                            {session?.user.role === "admin" && (
-                                <li>
-                                    <Link href="/admin" onClick={closeMenu} className="text-neutral-50 hover:text-neutral-200 whitespace-nowrap">Admin</Link>
-                                </li>
-                            )}
-                            <li>
-                                <Link href="/user" onClick={closeMenu} className="text-neutral-50 hover:text-neutral-200 whitespace-nowrap">Account</Link>
-                            </li>
-                            <li>
-                                <button className="text-neutral-50 hover:text-neutral-200 cursor-pointer" onClick={() => { closeMenu(); signOut({ callbackUrl: "/" }); }}>Sign Out</button>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
+                        <span className="grid h-7 w-7 place-items-center overflow-hidden rounded-full bg-[#f3d78a] text-xs font-bold text-[#241507]">
+                            {session.user.image ? <Image src={session.user.image} alt="" width={28} height={28} className="h-full w-full object-cover" /> : getInitials(session.user.name)}
+                        </span>
+                        <ChevronIcon open={isAccountOpen} />
+                    </button>
+                    {isAccountOpen && (
+                        <AccountMenu isAdmin={session.user.role === "admin"} closeMenus={closeMenus} />
+                    )}
+                </div>
             ) : (
-                <li ref={menuRef} className="px-4 flex items-center justify-center relative">
-                    <input
-                        ref={menuCheckboxRef}
-                        type="checkbox"
-                        id="nav-menu-toggle"
-                        className="peer hidden"
-                    />
-                    {/* Click-outside overlay */}
-                    <label
-                        htmlFor="nav-menu-toggle"
-                        className="hidden peer-checked:block peer-checked:fixed peer-checked:inset-0 peer-checked:z-40 peer-checked:cursor-default"
-                        aria-hidden="true"
-                    />
-                    {/* Trigger — chevron rotates when open */}
-                    <label
-                        htmlFor="nav-menu-toggle"
-                        className="relative z-50 cursor-pointer transition-transform duration-300 ease-out peer-checked:rotate-180"
+                <div className="relative hidden md:block">
+                    <button
+                        type="button"
+                        onClick={() => setAccountOpen((open) => !open)}
+                        className="focus-ring flex h-10 items-center gap-2 rounded-full border border-white/10 px-4 text-[.68rem] font-semibold uppercase tracking-[.16em] text-white/70 transition hover:border-[#f3d78a]/60 hover:bg-white/10 hover:text-white"
+                        aria-expanded={isAccountOpen}
+                        aria-haspopup="menu"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            className="h-4 w-4"
-                            role="img"
-                            aria-hidden="false"
-                            aria-label="Open menu"
-                            fill="currentColor"
-                        >
-                            <path d="M12 16.5c-.25 0-.5-.1-.7-.29l-7.5-7.5a1 1 0 011.41-1.41L12 13.08l6.79-6.78a1 1 0 111.41 1.41l-7.5 7.5c-.2.19-.45.29-.7.29z" />
-                        </svg>
-                    </label>
-                    {/* Dropdown menu — animated with opacity + scale + slide */}
-                    <div className="absolute top-9 right-0 z-50 px-4 py-8 w-max rounded bg-gray-50/20 dark:bg-gray-950/20 shadow backdrop-blur-[7.5px] border-[1px] border-gray-50/10 dark:border-gray-950/10 opacity-0 scale-95 -translate-y-2 pointer-events-none peer-checked:opacity-100 peer-checked:scale-100 peer-checked:translate-y-0 peer-checked:pointer-events-auto transition-all duration-300 ease-out transform-gpu">
-                        <ul className="flex flex-col gap-4">
-                            <li>
-                                <Link href="/auth/signin" onClick={closeMenu} className="text-neutral-50 hover:text-neutral-200 whitespace-nowrap">Sign In</Link>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
+                        Sign in
+                        <ChevronIcon open={isAccountOpen} />
+                    </button>
+                    {isAccountOpen && <AccountMenu closeMenus={closeMenus} />}
+                </div>
             )}
 
-            <div>
-                <div className="absolute -top-6 right-12">
-                    <button
-                        className="cursor-pointer flex items-center justify-center text-xs"
-                        onClick={() => setCartOpen(true)}
-                    >
-                        Cart
-                        <Image
-                            className="ml-2"
-                            src={CA}
-                            alt="Cart"
-                            width={15}
-                            height={15}
-                        />
-                    </button>
-                </div>
+            <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                className="focus-ring grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/80 transition hover:border-[#f3d78a]/60 hover:bg-white/10 md:hidden"
+                aria-expanded={isMenuOpen}
+                aria-controls="mobile-navigation"
+                aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            >
+                <MenuIcon open={isMenuOpen} />
+            </button>
 
-                <div ref={cartRef} className={`w-full absolute top-9 right-0 rounded ${isCartOpen ? "block" : "hidden"}`}>
-                    <CartSidebar onClose={() => setCartOpen(false)} />
-                </div>
-            </div>
-        </ul>
-    )
+            {isMenuOpen && (
+                <nav id="mobile-navigation" className="absolute right-0 top-[calc(100%+0.75rem)] w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-[#120d18]/95 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
+                    <div className="flex flex-col gap-1">
+                        {navlinks.map((navlink) => (
+                            <Link key={navlink.title} href={navlink.link} onClick={closeMenus} className="rounded-xl px-4 py-3 text-sm uppercase tracking-[.14em] text-white/70 transition hover:bg-white/10 hover:text-white">
+                                {navlink.title}
+                            </Link>
+                        ))}
+                        <Link href="/tickets" onClick={closeMenus} className="cta cta-solid mt-2 px-4 py-3 text-center text-sm uppercase tracking-[.14em]">
+                            Get your pass
+                        </Link>
+                        {!session?.user && <Link href="/auth/signin" onClick={closeMenus} className="rounded-xl px-4 py-3 text-sm uppercase tracking-[.14em] text-white/70 transition hover:bg-white/10 hover:text-white">Sign in</Link>}
+                        {session?.user && <AccountMenu isAdmin={session.user.role === "admin"} closeMenus={closeMenus} mobile />}
+                    </div>
+                </nav>
+            )}
+
+            {isCartOpen && <CartSidebar onClose={() => setCartOpen(false)} />}
+        </div>
+    );
+}
+
+function AccountMenu({ isAdmin = false, closeMenus, mobile = false }: { isAdmin?: boolean; closeMenus: () => void; mobile?: boolean }) {
+    return (
+        <div className={mobile ? "mt-1 border-t border-white/10 pt-1" : "absolute right-0 top-[calc(100%+0.75rem)] z-50 w-44 rounded-2xl border border-white/10 bg-[#120d18]/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"} role="menu">
+            {isAdmin && <Link href="/admin" onClick={closeMenus} className="block rounded-xl px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white" role="menuitem">Admin</Link>}
+            <Link href="/user" onClick={closeMenus} className="block rounded-xl px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white" role="menuitem">Account</Link>
+            <button type="button" onClick={() => { closeMenus(); void signOut({ callbackUrl: "/" }); }} className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-white/70 transition hover:bg-white/10 hover:text-white" role="menuitem">Sign out</button>
+        </div>
+    );
 }

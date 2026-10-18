@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-
 import { useSession } from "next-auth/react";
 
-import { useCartContext } from "@/contexts/CartContext";
 import Hero from "./hero";
-
 import PayWithPayPalButton from "@/components/pay-with-paypal-button";
-
+import { useCartContext } from "@/contexts/CartContext";
 import { useToast } from "@/components/toast-provider";
-
 import WI from "../../assets/images/wise.svg";
 
 type TicketType = {
@@ -24,515 +20,207 @@ type TicketType = {
     quantity: number;
     sold: number;
     category: string;
-    metadata?: Record<string, unknown>;
-    thumbnail?: {
-        dataUrl: string;
-        size: number;
-        mime: string;
-        width?: number;
-        height?: number;
-    } | null;
-    wise?: {
-        enabled: boolean;
-        paymentLink?: string | null;
-        depositInstructions?: string | null;
-    } | null;
-    createdAt?: string | Date;
-    updatedAt?: string | Date;
+    thumbnail?: { dataUrl: string; mime?: string } | null;
+    wise?: { enabled: boolean } | null;
 };
+
+type WiseModalData = {
+    ticketId: string;
+    name: string;
+    quantity: number;
+    paymentLink?: string | null;
+    instructions?: string | null;
+    orderId?: string | null;
+};
+
+const categories = ["all", "festival pass", "single pass", "special workshops", "other events"] as const;
+
+function readableDescription(description?: string) {
+    if (!description) return "A full night of movement, connection, and unforgettable energy.";
+    return description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
 
 export default function Main() {
     const router = useRouter();
-
     const { data: session } = useSession();
     const { addToCart, cart } = useCartContext();
-
     const toast = useToast();
-
     const [tickets, setTickets] = useState<TicketType[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // track per-ticket desired quantities (local UI state)
+    const [selectedCategory, setSelectedCategory] = useState<(typeof categories)[number]>("all");
     const [quantities, setQuantities] = useState<Record<string, number>>({});
-
-    // Modal state for Wise deposit instructions + order creation state
-    const [showWiseModal, setShowWiseModal] = useState(false);
-    const [wiseModalData, setWiseModalData] = useState<{
-        paymentLink?: string | null;
-        instructions?: string | null;
-        name?: string;
-        ticketId?: string;
-    } | null>(null);
-
+    const [wiseModalData, setWiseModalData] = useState<WiseModalData | null>(null);
     const [creatingOrder, setCreatingOrder] = useState(false);
-    const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
-    const [orderError, setOrderError] = useState<string | null>(null);
-
     const [localCodes, setLocalCodes] = useState<Record<string, string>>({});
     const [validatingTicketId, setValidatingTicketId] = useState<string | null>(null);
     const [discountInfo, setDiscountInfo] = useState<Record<string, { discountedPrice: number; code: string } | undefined>>({});
     const [validateErrors, setValidateErrors] = useState<Record<string, string>>({});
-
-    // per-ticket loading state to prevent double-clicks
     const [addingToCart, setAddingToCart] = useState<Record<string, boolean>>({});
 
-    // Fetch tickets
     useEffect(() => {
         let mounted = true;
-        const fetchTickets = async () => {
-            try {
-                setLoading(true);
-                const res = await fetch("/api/tickets");
-                if (!res.ok) throw new Error("Failed to load tickets");
-                const data = await res.json();
-                const list: TicketType[] = Array.isArray(data) ? data : data.tickets ?? data;
-                if (mounted) {
-                    setTickets(list);
-                    // initialize quantities for items not in cart to 1
-                    const initial: Record<string, number> = {};
-                    for (const t of list) {
-                        initial[t._id] = 1;
-                    }
-                    setQuantities((prev) => ({ ...initial, ...prev }));
-                }
-            } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-                console.error(e);
-                if (mounted) setError(e?.message ?? "Failed to load");
-            } finally {
+        fetch("/api/tickets")
+            .then(async (response) => {
+                if (!response.ok) throw new Error("Failed to load tickets");
+                return response.json();
+            })
+            .then((data) => {
+                if (!mounted) return;
+                const list: TicketType[] = Array.isArray(data) ? data : data.tickets ?? [];
+                setTickets(list);
+                setQuantities((previous) => Object.fromEntries(list.map((ticket) => [ticket._id, previous[ticket._id] ?? 1])));
+            })
+            .catch((reason: unknown) => {
+                if (mounted) setError(reason instanceof Error ? reason.message : "Failed to load tickets");
+            })
+            .finally(() => {
                 if (mounted) setLoading(false);
-            }
-        };
-        fetchTickets();
+            });
         return () => {
             mounted = false;
         };
     }, []);
 
-    const openWiseModal = (ticket: TicketType) => {
-        if (!session?.user?.email) {
-            toast.push({ title: "Sign in required", message: "Please sign in to proceed to payment.", level: "info" });
+    const visibleTickets = useMemo(
+        () => selectedCategory === "all" ? tickets : tickets.filter((ticket) => ticket.category === selectedCategory),
+        [selectedCategory, tickets],
+    );
+
+    const setQuantity = (ticketId: string, quantity: number, maximum: number) => {
+        setQuantities((previous) => ({ ...previous, [ticketId]: Math.min(Math.max(1, quantity), Math.max(1, maximum)) }));
+    };
+
+    const requestWiseOrder = async (ticket: TicketType) => {
+        if (!session?.user) {
+            toast.push({ title: "Sign in required", message: "Sign in before payment.", level: "info" });
             router.push("/api/auth/signin");
             return;
         }
-
-        if (!session?.user?.email) {
-            toast.push({ title: "Complete your profile", message: "Please complete your profile proceed to payment.", level: "info" });
+        if (!session.user.profileComplete) {
+            toast.push({ title: "Complete your profile", message: "Finish your profile before payment.", level: "info" });
             router.push("/user");
             return;
         }
-
-        setWiseModalData({
-            paymentLink: ticket.wise?.paymentLink ?? null,
-            instructions: ticket.wise?.depositInstructions ?? null,
-            name: ticket.name,
-            ticketId: ticket._id,
-        });
-        setCreatedOrderId(null);
-        setOrderError(null);
-        setShowWiseModal(true);
+        setWiseModalData({ ticketId: ticket._id, name: ticket.name, quantity: quantities[ticket._id] ?? 1 });
     };
 
-    const closeWiseModal = () => {
-        setShowWiseModal(false);
-        setWiseModalData(null);
-        setCreatingOrder(false);
-        setCreatedOrderId(null);
-        setOrderError(null);
-    };
-
-    // Create order and then open the Wise link
-    const createOrderAndOpenWise = async (
-        ticketId?: string,
-        paymentLink?: string | null,
-        instructions?: string | null
-    ) => {
-        if (!ticketId) return setOrderError("Missing ticket id");
-        setOrderError(null);
+    const createWiseOrder = async () => {
+        if (!wiseModalData) return;
         setCreatingOrder(true);
-        setCreatedOrderId(null);
-
         try {
-            const res = await fetch("/api/orders", {
+            const response = await fetch("/api/orders", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ticketId,
-                    quantity: 1,
-                    paymentLink: paymentLink ?? null,
-                    depositInstructions: instructions ?? null,
-                }),
+                body: JSON.stringify({ ticketId: wiseModalData.ticketId, quantity: wiseModalData.quantity }),
             });
-
-            const payload = await res.json();
-
-            if (!res.ok) {
-                setOrderError(payload?.error || "Failed to create order");
-                setCreatingOrder(false);
-                return;
-            }
-
-            const order = payload.order;
-            // store created order id for UI
-            setCreatedOrderId(order?._id ?? order?.id ?? null);
-
-            // Open the Wise link (in a new tab) so the user can see bank details
-            if (paymentLink) {
-                // open in new tab; keep modal open so user sees order id/instructions
-                // window.open(paymentLink, "_blank");
-                router.push(paymentLink);
-            }
-
-            setCreatingOrder(false);
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error("create order error", err);
-            setOrderError(err?.message || "Failed to create order");
-            setCreatingOrder(false);
-        }
-    };
-
-    // quantity helpers
-    // const setQuantityFor = (ticketId: string, q: number) => {
-    //     setQuantities((prev) => ({ ...prev, [ticketId]: q }));
-    // };
-
-    const incrementQty = (ticketId: string, max: number) => {
-        setQuantities((prev) => {
-            const current = Math.max(1, Number(prev[ticketId] ?? 1));
-            const next = Math.min(max, current + 1);
-            return { ...prev, [ticketId]: next };
-        });
-    };
-
-    const decrementQty = (ticketId: string) => {
-        setQuantities((prev) => {
-            const current = Math.max(1, Number(prev[ticketId] ?? 1));
-            const next = Math.max(1, current - 1);
-            return { ...prev, [ticketId]: next };
-        });
-    };
-
-    // Add to cart handler: uses chosen quantity, prevents double-clicks
-    const handleAddToCart = async (ticket: TicketType, discountCode: string | null = null, discountedPrice: number | null = null) => {
-        const ticketId = ticket._id;
-        if (addingToCart[ticketId]) return; // prevent double-click
-
-        setAddingToCart((prev) => ({ ...prev, [ticketId]: true }));
-        try {
-            const desired = Math.max(1, Number(quantities[ticketId] ?? 1));
-            await addToCart(
-                ticket.name,
-                discountedPrice ? discountedPrice : ticket.price,
-                ticket.currency,
-                ticketId,
-                desired,
-                discountCode
-            );
-            toast.push({
-                title: "Added to Cart",
-                message: `${ticket.name} (×${desired}) has been added to your cart.`,
-                level: "success",
-            });
-        } catch {
-            toast.push({
-                title: "Failed",
-                message: "Could not add item to cart. Please try again.",
-                level: "error",
-            });
+            const payload = await response.json().catch(() => null) as { order?: { _id?: string }; paymentLink?: string; depositInstructions?: string; error?: string } | null;
+            if (!response.ok) throw new Error(payload?.error ?? "Unable to create Wise order");
+            const paymentLink = payload?.paymentLink;
+            if (!paymentLink || !/^https?:\/\//i.test(paymentLink)) throw new Error("Wise did not return a valid payment link");
+            setWiseModalData((previous) => previous ? { ...previous, orderId: payload?.order?._id ?? null, paymentLink, instructions: payload?.depositInstructions ?? null } : previous);
+            window.location.assign(paymentLink);
+        } catch (reason: unknown) {
+            toast.push({ title: "Wise unavailable", message: reason instanceof Error ? reason.message : "Unable to start Wise checkout", level: "error" });
         } finally {
-            setAddingToCart((prev) => ({ ...prev, [ticketId]: false }));
+            setCreatingOrder(false);
         }
     };
 
-    const validateCode = async (ticketId: string, code: string) => {
-        setValidateErrors((prev) => ({ ...prev, [ticketId]: "" }));
-        setValidatingTicketId(ticketId);
-        setDiscountInfo((prev) => {
-            const updated = { ...prev };
-            delete updated[ticketId];
-            return updated;
-        });
+    const handleAddToCart = async (ticket: TicketType) => {
+        if (addingToCart[ticket._id]) return;
+        const quantity = quantities[ticket._id] ?? 1;
+        const discount = discountInfo[ticket._id];
+        setAddingToCart((previous) => ({ ...previous, [ticket._id]: true }));
         try {
-            const res = await fetch("/api/discounts/validate", {
+            await addToCart(ticket.name, ticket.price, ticket.currency, ticket._id, quantity, discount?.code ?? null, discount?.discountedPrice ?? null);
+            toast.push({ title: "Added to cart", message: `${ticket.name} ×${quantity} is ready.`, level: "success" });
+        } catch (reason: unknown) {
+            toast.push({ title: "Could not add ticket", message: reason instanceof Error ? reason.message : "Please try again.", level: "error" });
+        } finally {
+            setAddingToCart((previous) => ({ ...previous, [ticket._id]: false }));
+        }
+    };
+
+    const validateCode = async (ticketId: string) => {
+        const code = (localCodes[ticketId] ?? "").trim();
+        if (!code) return;
+        setValidatingTicketId(ticketId);
+        setValidateErrors((previous) => ({ ...previous, [ticketId]: "" }));
+        setDiscountInfo((previous) => ({ ...previous, [ticketId]: undefined }));
+        try {
+            const response = await fetch("/api/discounts/validate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ticketId, code }),
             });
-            const json = await res.json();
-            if (!res.ok) {
-                setValidateErrors((prev) => ({ ...prev, [ticketId]: json?.error || "Invalid code" }));
-            } else {
-                setDiscountInfo((prev) => ({ ...prev, [ticketId]: { discountedPrice: json.discountedPrice, code: json.code } }));
-            }
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            console.error("validate discount err", err);
-            setValidateErrors((prev) => ({ ...prev, [ticketId]: err?.message || "Validation failed" }));
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload?.error ?? "Invalid discount code");
+            setDiscountInfo((previous) => ({ ...previous, [ticketId]: { discountedPrice: payload.discountedPrice, code: payload.code } }));
+        } catch (reason: unknown) {
+            setValidateErrors((previous) => ({ ...previous, [ticketId]: reason instanceof Error ? reason.message : "Validation failed" }));
         } finally {
             setValidatingTicketId(null);
         }
     };
 
     return (
-        <div className="bg-black text-white min-h-dvh">
+        <main className="min-h-dvh bg-[#09070d] text-white">
             <Hero />
-            <div className="w-full h-full px-6 py-12 flex flex-col justify-center items-center">
-                {loading && (
-                    <div className="w-full max-w-7xl animate-pulse">
-                        <div className="h-8 w-48 rounded-lg bg-gray-800 mx-auto mb-10" />
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
-                                    <div className="h-48 w-full bg-gray-800" />
-                                    <div className="p-4 space-y-3">
-                                        <div className="h-5 w-3/4 rounded bg-gray-800" />
-                                        <div className="h-4 w-full rounded bg-gray-800" />
-                                        <div className="h-4 w-2/3 rounded bg-gray-800" />
-                                        <div className="h-6 w-1/4 rounded bg-gray-800" />
-                                        <div className="flex gap-2 pt-2">
-                                            <div className="h-10 flex-1 rounded-full bg-gray-800" />
-                                            <div className="h-10 w-20 rounded-full bg-gray-800" />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+            <section id="ticket-catalog" className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
+                <div className="flex flex-col gap-8 border-b border-white/10 pb-10 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="max-w-2xl">
+                        <p className="eyebrow text-[#f3d78a]">Choose your access</p>
+                        <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em] sm:text-6xl">Make your entrance.</h2>
+                        <p className="mt-5 max-w-xl text-base leading-7 text-white/60">Secure your place in the room. Pick a pass, set your quantity, and checkout when your lineup feels right.</p>
                     </div>
-                )}
-
-                {error && <p className="text-red-500">{error}</p>}
-
-                {!error && !loading && (
-                    <div className="w-full max-w-7xl">
-                        <h1 className="text-2xl font-bold mb-6 text-center">Tickets</h1>
-
-                        {["festival pass", "single pass", "special workshops", "other events"].map((category) => (
-                            <div key={category}>
-                                {tickets.some((t) => t.category === category) && (
-                                    <>
-                                        <h3 className="text-lg font-bold my-6 text-start capitalize">{category}</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            {tickets.map((ticket) => {
-                                                const remaining = Math.max(0, ticket.quantity - ticket.sold);
-                                                const cartQuantity = cart?.find((i) => i.ticketId === ticket._id)?.quantity ?? 0;
-                                                const maxSelectable = Math.max(0, remaining - cartQuantity);
-                                                const qty = Math.max(1, Number(quantities[ticket._id] ?? 1));
-
-                                                if (ticket.category === category) {
-                                                    return (
-                                                        <div
-                                                            key={ticket._id}
-                                                            className="glow border bg-gradient-to-tr from-peach-800 via-neutral-dark to-peach-800 rounded shadow-md flex flex-col justify-between"
-                                                        >
-                                                            <div>
-                                                                {ticket.thumbnail?.dataUrl ? (
-                                                                    <div className="mb-3 w-full flex justify-center relative aspect-video">
-                                                                        <Image
-                                                                            src={ticket.thumbnail.dataUrl}
-                                                                            alt={`${ticket.name} thumbnail`}
-                                                                            fill
-                                                                            unoptimized
-                                                                            className="object-cover rounded-t-2xl"
-                                                                        />
-                                                                    </div>
-                                                                ) : null}
-
-                                                                <h2 className="px-4 text-lg font-semibold">{ticket.name}</h2>
-                                                                {ticket.description &&
-                                                                    <p
-                                                                        className="px-4 text-sm text-gray-300 mb-2 prose prose-p:my-4 prose-strong:text-peach-200 prose-h3:text-peach-200"
-                                                                        dangerouslySetInnerHTML={{ __html: ticket.description || "" }}>
-                                                                    </p>}
-
-                                                                <div className="px-4 flex items-baseline gap-2">
-                                                                    {discountInfo[ticket._id]?.discountedPrice !== undefined ? (
-                                                                        <>
-                                                                            <div className="text-xl font-bold text-gray-400 line-through">
-                                                                                ${ticket.price}
-                                                                            </div>
-                                                                            <div className="text-xl font-bold text-peach-200">
-                                                                                ${discountInfo[ticket._id]!.discountedPrice.toFixed(2)}
-                                                                            </div>
-                                                                        </>
-                                                                    ) : (
-                                                                        <div className="text-xl font-bold">${ticket.price}</div>
-                                                                    )}
-                                                                    <div className="text-sm text-gray-400"> {ticket.currency}</div>
-                                                                </div>
-
-                                                                <p className="px-4 text-sm text-gray-400 mt-1">{remaining} left</p>
-                                                            </div>
-
-                                                            <div className="mt-4 px-4 pb-4 flex flex-col gap-3">
-                                                                {/* Quantity selector */}
-                                                                <div className="flex items-center gap-2">
-                                                                    <label className="text-sm">Quantity</label>
-                                                                    <div className="ml-auto flex items-center gap-2">
-                                                                        <button
-                                                                            type="button"
-                                                                            aria-label="Decrease quantity"
-                                                                            onClick={() => decrementQty(ticket._id)}
-                                                                            className="px-2 py-1 bg-white/10 rounded"
-                                                                            disabled={qty <= 1}
-                                                                        >
-                                                                            −
-                                                                        </button>
-                                                                        <span>
-                                                                            {qty}
-                                                                        </span>
-                                                                        <button
-                                                                            type="button"
-                                                                            aria-label="Increase quantity"
-                                                                            onClick={() => incrementQty(ticket._id, Math.max(1, maxSelectable))}
-                                                                            className="px-2 py-1 bg-white/10 rounded"
-                                                                            disabled={qty >= Math.max(1, maxSelectable)}
-                                                                        >
-                                                                            +
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="mt-4 flex flex-col gap-2">
-                                                                    <div className="flex gap-2 items-center">
-                                                                        <input
-                                                                            value={localCodes[ticket._id] ?? ""}
-                                                                            onChange={(e) => { setLocalCodes((prev) => ({ ...prev, [ticket._id]: e.target.value })); setValidateErrors((prev) => ({ ...prev, [ticket._id]: "" })); }}
-                                                                            placeholder="Discount code"
-                                                                            className="border p-2 rounded w-3/4 text-gray-300 uppercase"
-                                                                        />
-                                                                        <button
-                                                                            onClick={() => validateCode(ticket._id, localCodes[ticket._id] ?? "")}
-                                                                            disabled={!(localCodes[ticket._id] ?? "") || validatingTicketId === ticket._id}
-                                                                            className="px-4 py-2 min-w-1/4 cta cta-outline"
-                                                                        >
-                                                                            {validatingTicketId === ticket._id ? "Checking…" : "Apply"}
-                                                                        </button>
-                                                                    </div>
-
-                                                                    {validateErrors[ticket._id] && <div className="text-xs text-red-500">{validateErrors[ticket._id]}</div>}
-
-                                                                    <button
-                                                                        onClick={() => handleAddToCart(ticket, discountInfo[ticket._id]?.code ?? null, discountInfo[ticket._id]?.discountedPrice ?? null)}
-                                                                        className={`mt-2 cta cta-outline px-4 py-2 rounded-full ${remaining === 0 || addingToCart[ticket._id] ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
-                                                                        disabled={remaining === 0 || addingToCart[ticket._id]}
-                                                                    >
-                                                                        {addingToCart[ticket._id] ? "Adding…" : "Add to Cart"}
-                                                                    </button>
-
-                                                                    <PayWithPayPalButton
-                                                                        ticketId={ticket._id}
-                                                                        quantity={1}
-                                                                        discountCode={discountInfo[ticket._id]?.code ?? null}
-                                                                    />
-
-                                                                    {ticket.wise?.enabled && ticket.wise?.paymentLink && (
-                                                                        <button
-                                                                            onClick={() => openWiseModal(ticket)}
-                                                                            className="flex items-center justify-center gap-2 cta cta-solid px-4 py-2 rounded-full bg-yellow-500 text-black hover:brightness-95"
-                                                                            disabled={remaining === 0 || discountInfo[ticket._id] !== undefined}
-                                                                        >
-                                                                            <span>Buy with</span>
-                                                                            <Image src={WI} alt="wise" width={20} height={20} />
-                                                                            <span>Wise</span>
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-                                            })}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Wise deposit modal */}
-            {showWiseModal && wiseModalData && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-                    onClick={closeWiseModal}
-                >
-                    <div className="bg-white text-black rounded-lg max-w-xl w-full p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold">Pay with Wise — {wiseModalData.name}</h3>
-                                <p className="text-sm text-gray-600">Follow the instructions below to complete your payment.</p>
-                            </div>
-                            <button onClick={closeWiseModal} aria-label="Close" className="text-gray-600 hover:text-gray-800">
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="mt-4 space-y-4 text-sm">
-                            {wiseModalData.instructions ? (
-                                <div>
-                                    <h4 className="font-medium mb-1">Deposit Instructions</h4>
-                                    <div className="prose max-w-none whitespace-pre-wrap text-gray-800">{wiseModalData.instructions}</div>
-                                </div>
-                            ) : (
-                                <div className="text-gray-700">No extra instructions provided. Use the payment link below to see bank details.</div>
-                            )}
-
-                            {wiseModalData.paymentLink ? (
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        {createdOrderId ? (
-                                            <a
-                                                href={wiseModalData.paymentLink}
-                                                className="inline-block mt-2 cta cta-solid text-black text-center px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                Open Wise Payment Details
-                                            </a>
-                                        ) : (
-                                            <button
-                                                onClick={() => createOrderAndOpenWise(wiseModalData.ticketId, wiseModalData.paymentLink, wiseModalData.instructions)}
-                                                disabled={creatingOrder}
-                                                className="inline-block mt-2 cta cta-solid text-black px-4 py-2 rounded-full bg-yellow-500 hover:brightness-95"
-                                            >
-                                                {creatingOrder ? "Creating order..." : "Open Wise Payment Details"}
-                                            </button>
-                                        )}
-
-                                        {createdOrderId && (
-                                            <div className="text-sm text-green-700">
-                                                Order created: <strong>{createdOrderId}</strong>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {orderError && <div className="text-sm text-red-600">{orderError}</div>}
-
-                                    {/* helper link in case the new tab was blocked */}
-                                    {createdOrderId && (
-                                        <div className="text-xs text-gray-600">
-                                            If the Wise page did not open automatically, copy & paste this link into a new tab:
-                                            <div className="mt-1 break-all">
-                                                <a href={wiseModalData.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                                                    {wiseModalData.paymentLink}
-                                                </a>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : null}
-                        </div>
-
-                        <div className="mt-6 flex justify-end">
-                            <button onClick={closeWiseModal} className="px-4 py-2 rounded bg-gray-200">
-                                Close
-                            </button>
-                        </div>
+                    <div className="grid grid-cols-3 gap-3 text-center sm:min-w-[24rem]">
+                        <div className="stat-card"><strong>{tickets.length}</strong><span>ticket types</span></div>
+                        <div className="stat-card"><strong>01</strong><span>weekend</span></div>
+                        <div className="stat-card"><strong>∞</strong><span>memories</span></div>
                     </div>
                 </div>
-            )}
-        </div>
+
+                <div className="mt-8 flex flex-wrap gap-2" aria-label="Ticket categories">
+                    {categories.map((category) => (
+                        <button key={category} type="button" onClick={() => setSelectedCategory(category)} className={`filter-pill ${selectedCategory === category ? "filter-pill-active" : ""}`}>{category}</button>
+                    ))}
+                </div>
+
+                <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    {loading && Array.from({ length: 6 }).map((_, index) => <div key={index} className="ticket-skeleton h-[34rem] animate-pulse" />)}
+                    {!loading && error && <div className="col-span-full rounded-3xl border border-[#f08b9a]/30 bg-[#f08b9a]/10 p-6 text-[#ffd9de]">{error}</div>}
+                    {!loading && !error && visibleTickets.length === 0 && <div className="col-span-full rounded-3xl border border-white/10 bg-white/[.03] p-12 text-center text-white/60">No tickets in this collection yet.</div>}
+                    {!loading && !error && visibleTickets.map((ticket, index) => {
+                        const remaining = Math.max(0, ticket.quantity - ticket.sold);
+                        const cartQuantity = cart.find((item) => item.ticketId === ticket._id)?.quantity ?? 0;
+                        const selectable = Math.max(0, remaining - cartQuantity);
+                        const quantity = Math.min(Math.max(1, quantities[ticket._id] ?? 1), Math.max(1, selectable));
+                        const discount = discountInfo[ticket._id];
+                        const soldOut = remaining === 0;
+                        return (
+                            <article key={ticket._id} className={`ticket-card ${index === 0 ? "ticket-card-featured" : ""}`}>
+                                <div className="ticket-card-glow" />
+                                {ticket.thumbnail?.dataUrl ? <div className="relative aspect-[16/10] overflow-hidden"><Image src={ticket.thumbnail.dataUrl} alt={`${ticket.name} ticket`} fill unoptimized className="object-cover transition duration-700 hover:scale-105" /></div> : <div className="ticket-art" />}
+                                <div className="relative flex flex-1 flex-col p-6 sm:p-7">
+                                    <div className="flex items-center justify-between gap-3"><span className="eyebrow text-[#f3d78a]">{ticket.category}</span><span className={`stock-label ${soldOut ? "stock-sold" : ""}`}>{soldOut ? "Sold out" : `${remaining} left`}</span></div>
+                                    <h3 className="mt-4 text-2xl font-semibold tracking-[-.03em]">{ticket.name}</h3>
+                                    <p className="mt-3 min-h-14 text-sm leading-6 text-white/55">{readableDescription(ticket.description)}</p>
+                                    <div className="mt-6 flex items-end justify-between gap-3"><div><span className="text-xs uppercase tracking-[.18em] text-white/40">From</span><div className="mt-1 text-3xl font-semibold text-[#f3d78a]">{ticket.currency} {ticket.price.toFixed(2)}</div></div>{discount && <div className="text-right"><span className="text-xs uppercase tracking-[.18em] text-white/40">With code</span><div className="mt-1 text-lg text-[#bff4df]">{ticket.currency} {discount.discountedPrice.toFixed(2)}</div></div>}</div>
+                                    <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-2"><span className="pl-3 text-xs uppercase tracking-[.16em] text-white/45">Quantity</span><div className="flex items-center gap-3"><button type="button" onClick={() => setQuantity(ticket._id, quantity - 1, selectable)} disabled={quantity <= 1} className="quantity-button" aria-label={`Decrease ${ticket.name}`}>−</button><span className="w-5 text-center font-semibold">{quantity}</span><button type="button" onClick={() => setQuantity(ticket._id, quantity + 1, selectable)} disabled={quantity >= Math.max(1, selectable)} className="quantity-button" aria-label={`Increase ${ticket.name}`}>+</button></div></div>
+                                    <div className="mt-4 flex gap-2"><input value={localCodes[ticket._id] ?? ""} onChange={(event) => { setLocalCodes((previous) => ({ ...previous, [ticket._id]: event.target.value.toUpperCase() })); setValidateErrors((previous) => ({ ...previous, [ticket._id]: "" })); }} placeholder="Promo code" className="field-input" aria-label={`Promo code for ${ticket.name}`} /><button type="button" onClick={() => void validateCode(ticket._id)} disabled={!localCodes[ticket._id] || validatingTicketId === ticket._id} className="filter-pill">{validatingTicketId === ticket._id ? "..." : "Apply"}</button></div>
+                                    {discount && <button type="button" onClick={() => setDiscountInfo((previous) => ({ ...previous, [ticket._id]: undefined }))} className="mt-2 text-left text-xs text-[#f3d78a]">Remove {discount.code}</button>}
+                                    {validateErrors[ticket._id] && <p className="mt-2 text-xs text-[#f08b9a]">{validateErrors[ticket._id]}</p>}
+                                    <div className="mt-auto grid gap-2 pt-6"><button type="button" onClick={() => void handleAddToCart(ticket)} disabled={soldOut || selectable === 0 || addingToCart[ticket._id]} className="cta cta-outline w-full px-4 py-3 text-sm uppercase tracking-[.12em]">{addingToCart[ticket._id] ? "Adding..." : "Add to cart"}</button><PayWithPayPalButton ticketId={ticket._id} quantity={quantity} discountCode={discount?.code ?? null} className="w-full text-sm uppercase tracking-[.12em]" /></div>
+                                    {ticket.wise?.enabled && <button type="button" onClick={() => void requestWiseOrder(ticket)} disabled={soldOut || selectable === 0 || Boolean(discount)} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-[#bff4df]/30 bg-[#bff4df]/10 px-4 py-3 text-sm uppercase tracking-[.12em] text-[#bff4df] transition hover:bg-[#bff4df]/20 disabled:cursor-not-allowed disabled:opacity-40"><span>Reserve with</span><Image src={WI} alt="Wise" width={20} height={20} /><span>Wise</span></button>}
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+            </section>
+
+            {wiseModalData && <div className="fixed inset-0 z-[60] grid place-items-center bg-black/80 p-5 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="wise-title" onClick={() => !creatingOrder && setWiseModalData(null)}><div className="w-full max-w-lg rounded-3xl border border-white/15 bg-[#17101f] p-7 shadow-2xl shadow-black/60" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-5"><div><p className="eyebrow text-[#bff4df]">Manual payment</p><h2 id="wise-title" className="mt-2 text-2xl font-semibold">Wise · {wiseModalData.name}</h2><p className="mt-2 text-sm leading-6 text-white/55">We create your order first, then take you to the secure Wise payment details.</p></div><button type="button" onClick={() => setWiseModalData(null)} className="focus-ring text-2xl text-white/50 hover:text-white" aria-label="Close Wise payment dialog">×</button></div><div className="mt-7 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.04] p-4"><span className="text-sm text-white/55">Tickets reserved</span><strong>{wiseModalData.quantity}</strong></div>{wiseModalData.instructions && <p className="mt-5 whitespace-pre-wrap rounded-2xl border border-[#bff4df]/20 bg-[#bff4df]/5 p-4 text-sm leading-6 text-white/70">{wiseModalData.instructions}</p>}<button type="button" onClick={() => void createWiseOrder()} disabled={creatingOrder} className="cta cta-solid mt-6 w-full px-5 py-3.5 text-sm uppercase tracking-[.14em]">{creatingOrder ? "Preparing Wise..." : "Continue to Wise"}</button><button type="button" onClick={() => setWiseModalData(null)} disabled={creatingOrder} className="mt-3 w-full py-2 text-sm text-white/45 hover:text-white">Keep browsing</button></div></div>}
+        </main>
     );
 }

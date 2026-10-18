@@ -1,25 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 
-
+import { FIXED_LOGO_URL } from "@/components/cloudinary-logo";
 
 import Navlinks from "./navlinks";
 
 export default function Navbar() {
     return (
-        <>
-            <nav className="p-6 flex flex-row flex-wrap justify-start content-center fixed top-0 left-0 z-12">
-                <Link
-                    href="/"
-                >
-                    <Image src="/images/logo_manilasbkz.png" alt="Manila SBKZ Overdose Logo" width={150} height={150} className="w-[65px] sm:w-[95px] md:w-[150px] h-auto" />
+        <header className="fixed inset-x-0 top-0 z-40 px-4 py-4 sm:px-6 sm:py-5">
+            <div className="mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-white/10 bg-[#09070d]/70 px-3 py-2 shadow-2xl shadow-black/20 backdrop-blur-xl sm:px-4">
+                <Link href="/" className="rounded-lg p-2 transition hover:opacity-80" aria-label="Manila SBKZ Overdose home">
+                    <Image src={FIXED_LOGO_URL} alt="Manila SBKZ Overdose home" width={240} height={80} sizes="(min-width: 768px) 50px, (min-width: 640px) 84px, 64px" className="h-auto w-12 object-contain" priority />
                 </Link>
-            </nav >
-            <nav className="p-6 flex flex-row flex-wrap justify-start content-center fixed top-0 right-0 z-12">
-                <span className="h-[calc(73.23/150*65px)] sm:h-[calc(73.23/150*95px)] md:h-[calc(73.23/150*150px)] grid place-items-center">
-                    <Navlinks />
-                </span>
-            </nav>
-        </>
+                <Navlinks />
+            </div>
+        </header>
     );
 }

@@ -1,4 +1,3 @@
-// components/paypal/PayWithPayPalButton.tsx
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -12,6 +11,25 @@ import { useCartContext } from "@/contexts/CartContext";
 
 import PP from "../assets/images/pp.svg";
 
+type CartItem = {
+    ticketName: string;
+    ticketPrice: number;
+    ticketCurrency: string;
+    ticketId: string;
+    quantity: number;
+    discountCode?: string | null;
+    discountedPrice?: number | null;
+};
+
+type Props = {
+    ticketId?: string;
+    quantity?: number;
+    useCart?: boolean;
+    className?: string;
+    children?: React.ReactNode;
+    discountCode?: string | null;
+};
+
 export default function PayWithPayPalButton({
     ticketId,
     quantity = 1,
@@ -19,158 +37,86 @@ export default function PayWithPayPalButton({
     className = "",
     children,
     discountCode,
-}: {
-    ticketId?: string;
-    quantity?: number;
-    useCart?: boolean;
-    className?: string;
-    children?: React.ReactNode;
-    discountCode?: string | null; // optional for single-ticket flow
-}) {
+}: Props) {
     const toast = useToast();
     const router = useRouter();
     const { data: session } = useSession();
-    const { cart, clearCart } = useCartContext();
+    const { cart } = useCartContext();
     const [loading, setLoading] = useState(false);
 
-    type CartItem = {
-        ticketName: string;
-        ticketPrice: number;
-        ticketCurrency: string;
-        ticketId: string;
-        quantity: number;
-        discountCode?: string | null;
-        discountedPrice?: number | null;
-    };
-
     const cartSummary = useMemo(() => {
-        if (!cart || cart.length === 0) return null;
-        const currency = cart[0].ticketCurrency ?? "USD";
-        const total = cart.reduce((acc, it) => acc + (it.discountedPrice ?? it.ticketPrice ?? 0) * (it.quantity ?? 1), 0);
+        if (cart.length === 0) return null;
+        const currency = cart[0]?.ticketCurrency ?? "USD";
+        const total = cart.reduce((sum, item) => sum + (item.discountedPrice ?? item.ticketPrice) * item.quantity, 0);
         return { currency, total, items: cart as CartItem[] };
     }, [cart]);
 
     const buildPayload = () => {
         if (useCart) {
-            if (!cartSummary || cartSummary.items.length === 0) return null;
-            const items = cartSummary.items.map((it) => ({
-                ticketId: it.ticketId,
-                quantity: it.quantity,
-                discountCode: it.discountCode ?? null,
-            }));
-            return { items };
+            if (!cartSummary) return null;
+            return {
+                items: cartSummary.items.map((item) => ({
+                    ticketId: item.ticketId,
+                    quantity: item.quantity,
+                    discountCode: item.discountCode ?? null,
+                })),
+            };
         }
-
         if (!ticketId) return null;
         return {
             ticketId,
-            quantity,
+            quantity: Math.max(1, Math.floor(quantity)),
             discountCode: discountCode ?? null,
         };
     };
 
     const handleClick = async () => {
-        if (!session?.user?.email) {
-            toast.push({ title: "Sign in required", message: "Please sign in to proceed to payment.", level: "info" });
+        if (!session?.user) {
+            toast.push({ title: "Sign in required", message: "Sign in before payment.", level: "info" });
             router.push("/api/auth/signin");
             return;
         }
-
-        if (!session?.user?.email) {
-            toast.push({ title: "Sign in required", message: "Please sign in to proceed to payment.", level: "info" });
-            router.push("/api/auth/signin");
+        if (!session.user.profileComplete) {
+            toast.push({ title: "Complete your profile", message: "Finish your profile before payment.", level: "info" });
+            router.push("/user");
             return;
         }
 
         const payload = buildPayload();
         if (!payload) {
-            toast.push({ title: "Nothing to pay", message: "No items selected.", level: "warning" });
+            toast.push({ title: "Nothing to pay", message: "No tickets selected.", level: "warning" });
             return;
         }
 
         setLoading(true);
-
         try {
-            const res = await fetch("/api/paypal/create-order", {
+            const response = await fetch("/api/paypal/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
-
-            const json = await res.json().catch(() => ({}));
-
-            if (!res.ok) {
-                // if server indicated stock mismatch, server returns message like "Only X left for Y"
-                const message = json?.error ?? json?.message ?? JSON.stringify(json);
-                // If cart checkout, attempt to refresh cart & redirect to tickets if quantity mismatch
-                if (useCart && typeof message === "string") {
-                    // heuristic if server included "Only N left" — server will enforce new quantity on create-order
-                    const m = String(message).match(/Only\s+(\d+)\s+left/);
-                    if (m) {
-                        try {
-                            // refresh cart (server should be authoritative) by fetching /api/cart
-                            const cartRes = await fetch("/api/cart");
-                            if (cartRes.ok) {
-                                await cartRes.json();
-                                // update local cart context (clearCart + re-set not available from here if no setter)
-                                // For simplicity: inform user and redirect to tickets page to re-add
-                                toast.push({ title: "Cart updated", message: "Some items changed availability — please review your cart.", level: "warning" });
-                                router.push("/tickets");
-                                return;
-                            }
-                        } catch (e) {
-                            // fallback to showing error
-                            console.log(e)
-                        }
-                    }
-                }
-                toast.push({ title: "Create order failed", message: String(message ?? "Unable to create order"), level: "error" });
-                setLoading(false);
-                return;
+            const data = await response.json().catch(() => null) as { approveUrl?: string; orderId?: string; error?: string; message?: string } | null;
+            if (!response.ok) {
+                throw new Error(data?.error ?? data?.message ?? "Unable to create PayPal order");
             }
-
-            const approveUrl: string | undefined = json.approveUrl ?? json.approveUrl;
-            const orderId: string | undefined = json.orderId ?? json.id;
-
-            if (!approveUrl) {
-                toast.push({ title: "No approval link", message: "PayPal did not return an approval link.", level: "error" });
-                setLoading(false);
-                return;
+            if (!data?.approveUrl || !/^https?:\/\//i.test(data.approveUrl)) {
+                throw new Error("PayPal did not return a valid approval link");
             }
-
-            // If cart checkout, clear cart now
-            if (useCart) {
-                try {
-                    await clearCart();
-                } catch (err) {
-                    console.warn("clearCart failed after order creation:", err);
-                }
-            }
-
-            // navigate to approveUrl (opening in same tab avoids popup blocking).
-            router.push(approveUrl);
-
-            toast.push({
-                title: "Order created",
-                message: orderId ? `Order ${orderId} created. Complete payment on PayPal.` : "Order created. Complete payment on PayPal.",
-                level: "info",
-            });
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error("PayPal create-order error:", err);
-            toast.push({ title: "Error", message: msg, level: "error" });
-        } finally {
+            window.location.assign(data.approveUrl);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unable to start PayPal checkout";
+            toast.push({ title: "Payment unavailable", message, level: "error" });
             setLoading(false);
         }
     };
 
-    const disabled = loading || (useCart && (!cartSummary || cartSummary.items.length === 0)) || (!useCart && !ticketId);
+    const disabled = loading || (useCart && !cartSummary) || (!useCart && !ticketId);
 
     return (
         <button
             onClick={handleClick}
             disabled={disabled}
-            className={`flex items-center justify-center gap-2 px-4 py-2 rounded cta cta-solid ${className} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-full cta cta-solid ${className} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
             aria-disabled={disabled}
             type="button"
         >
@@ -180,15 +126,13 @@ export default function PayWithPayPalButton({
                     <span>Preparing…</span>
                 </>
             ) : (
-                <>
-                    {children ?? (useCart ? "Checkout" : (
-                        <>
-                            Buy with
-                            <Image src={PP} alt="PayPal" width={20} height={20} />
-                            PayPal
-                        </>
-                    ))}
-                </>
+                children ?? (useCart ? "Checkout with PayPal" : (
+                    <>
+                        <span>Pay with</span>
+                        <Image src={PP} alt="PayPal" width={20} height={20} />
+                        <span>PayPal</span>
+                    </>
+                ))
             )}
         </button>
     );

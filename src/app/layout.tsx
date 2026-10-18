@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
-import { Montserrat } from 'next/font/google'
-import localFont from "next/font/local"
+import { Cormorant_Garamond, Montserrat } from 'next/font/google'
 import "./globals.css";
 
 import Navbar from "@/components/navbar/navbar";
@@ -19,10 +18,10 @@ const montserrat = Montserrat({
   variable: "--font-body",
   subsets: ['latin']
 })
-const clashDisplay = localFont({
-  src: "../assets/fonts/ClashDisplay-Variable.ttf",
-  variable: "--font-header"
-
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"]
 })
 
 export const metadata: Metadata = {
@@ -41,13 +40,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://manilasbkoverdose.com/",
+    url: "https://manila.sbkzoverdose.com/",
     title: "Manila SBKZ Overdose | The Ultimate Afro-Latin Dance Festival",
     description:
       "Join the ultimate Afro-Latin dance festival in Manila with top international artists, workshops, and social dance nights.",
     images: [
       {
-        url: "https://manilasbkoverdose.com/banner.jpg",
+        url: "https://manila.sbkzoverdose.com/banner.jpg",
         width: 1200,
         height: 630,
         alt: "Manila SBKZ Overdose - Afro-Latin Dance Festival",
@@ -70,8 +69,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${clashDisplay.className} ${montserrat.className}`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${cormorantGaramond.variable} ${montserrat.className}`}>
         <Providers>
           <Navbar />
           {children}

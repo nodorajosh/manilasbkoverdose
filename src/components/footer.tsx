@@ -2,6 +2,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import CloudinaryLogo from "@/components/cloudinary-logo";
+
 import WA from "../assets/images/wa.svg";
 import FB from "../assets/images/fb.svg";
 import IG from "../assets/images/ig.svg";
@@ -40,13 +42,7 @@ export default function Footer() {
             {/* Logo */}
             <div className="grid place-items-center">
                 <Link href="/" className="block">
-                    <Image
-                        src="/images/logo_manilasbkz.png"
-                        alt="Manila SBKZ Overdose Logo"
-                        width={150}
-                        height={150}
-                        className="w-[65px] sm:w-[95px] md:w-[150px] h-auto"
-                    />
+                    <CloudinaryLogo className="h-auto w-[65px] sm:w-[95px] md:w-[150px]" />
                 </Link>
 
                 {/* Terms link under logo for visibility */}

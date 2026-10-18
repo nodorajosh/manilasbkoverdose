@@ -1,65 +1,39 @@
-// import Image from "next/image";
-// import Link from "next/link";
+"use client";
 
-// import HeroBG from "../../assets/images/manilasbk_hero_bg.png"
-// import HeroText from "../../assets/images/manilasbk_hero_text.svg"
-// import HeroOverlay from "../../assets/images/manilasbk_hero_overlay.png"
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-// const styles = {
-//     backgroundRepeat: "no-repeat",
-//     backgroundPosition: "center",
-//     backgroundSize: "cover",
-// }
+import CloudinaryLogo from "@/components/cloudinary-logo";
+const FALLBACK_HERO = "https://res.cloudinary.com/dmioegrww/image/upload/v1792294239/741705230_122291761946035250_3199701299302573038_n_mmnku3.jpg";
+import { fetchBrandingAssets } from "@/lib/fetch-branding";
+import type { BrandingAsset } from "@/lib/branding-assets";
 
 export default function Hero() {
-    return (
-        <div
-            id="hero"
-            className="h-dvh bg-[#0d0d0d] relative"
-        >
-            <div
-                className="h-full w-full aspect-video grid place-items-center">
-                <video
-                    className="w-full md:h-full object-cover"
-                    autoPlay
-                    muted
-                    playsInline
-                >
-                    <source src="https://res.cloudinary.com/dptolxtcn/video/upload/v1757019545/SBKZ_rxdgbj.mp4" type="video/mp4" />
-                </video>
-            </div>
-            {/* <h1 className="absolute top-0 left-0 opacity-0">Ignite the Night</h1>
-            <h3 className="absolute top-0 left-0 opacity-0">with Afro-Latin Rhythms in Manila</h3>
-            <div
-                className="p-6 h-full w-full text-white absolute grid place-items-center"
-                style={{ ...styles, backgroundImage: `url(${HeroBG.src})` }}
-            >
-                <div className="text-center font-header sm:h-[10rem] md:h-[12rem] xl:h-[25rem]">
-                    <Image src={HeroText.src} alt="Ignite the Night with Afro-Latin Rhythms in Manila" width={0} height={0} style={{ width: '100%', height: 'auto' }} />
-                </div>
+    const [hero, setHero] = useState<BrandingAsset | null>(null);
 
+    useEffect(() => {
+        let active = true;
+        fetchBrandingAssets().then((assets) => {
+            if (active) setHero(assets?.hero ?? null);
+        }).catch(() => undefined);
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    return (
+        <section id="hero" className="relative isolate min-h-dvh overflow-hidden bg-[#09070d] text-white">
+            <div className="absolute inset-0">
+                {hero?.resource_type === "video" ? <video className="h-full w-full object-cover opacity-65" autoPlay muted loop playsInline><source src={hero.url} /></video> : <Image src={hero?.url ?? FALLBACK_HERO} alt={hero ? "Manila SBKZ Overdose hero" : "Filipino couple dancing salsa in a Manila nightclub"} fill priority sizes="100vw" unoptimized={Boolean(hero)} className="object-cover object-center opacity-65" />}
             </div>
-            <div
-                className="h-full w-full text-white absolute grid place-items-center"
-                style={{ ...styles, backgroundImage: `url(${HeroOverlay.src})` }}
-            >
-                <div className="text-center font-header h-[20rem] flex flex-wrap content-end justify-center">
-                    <Link href="/tickets" className="px-6 cta rounded>
-                        <span className="h3 text-[1.2rem]">Get Your Tickets Now</span>
-                    </Link>
-                </div>
-            </div> */}
-            {/* <p className="absolute inset-x-0 bottom-6 text-white text-center">
-                Scroll Down
-            </p> */}
-            <div className="absolute inset-x-0 bottom-6 flex flex-wrap content-start justify-center">
-                <div className="scrolldown">
-                    <div className="chevrons">
-                        <div className="chevrondown"></div>
-                        <div className="chevrondown"></div>
-                    </div>
-                </div>
+            <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(8,5,12,.98)_8%,rgba(27,10,35,.7)_52%,rgba(8,5,12,.3)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(243,215,138,.2),transparent_28%)]" />
+            <div className="relative mx-auto flex min-h-dvh w-full max-w-7xl flex-col justify-end px-5 pb-12 pt-32 sm:px-8 sm:pb-16 lg:px-12">
+                <div className="max-w-4xl"><CloudinaryLogo className="h-auto w-32 sm:w-44" /><p className="eyebrow mt-9 text-[#f3d78a]">Afro - Latin Dance Festival</p><h1 className="mt-4 max-w-4xl text-6xl leading-[.9] tracking-[-.06em] sm:text-8xl lg:text-9xl">Where the city moves as one.</h1><p className="mt-7 max-w-xl text-base leading-7 text-white/70 sm:text-lg">Three days of workshops, world-class artists, and late-night connection in the heart of Manila.</p><div className="mt-9 flex flex-wrap gap-3"><Link href="/tickets" className="cta cta-solid px-6 py-3.5 text-sm uppercase tracking-[.14em]">Get your pass</Link><a href="#artists" className="cta cta-outline px-6 py-3.5 text-sm uppercase tracking-[.14em]">Meet the lineup</a></div></div>
+                <div className="mt-14 flex flex-wrap gap-8 border-t border-white/15 pt-5 text-xs uppercase tracking-[.18em] text-white/50"><span>Manila, Philippines</span><span>Dance · music · culture</span></div>
             </div>
-        </div>
+        </section>
     );
 }

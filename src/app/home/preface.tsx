@@ -2,21 +2,8 @@ import Link from "next/link";
 
 export default function Preface() {
     return (
-        <div
-            id="preface"
-            className="px-6 py-12 relative min-h-[35dvh] grid place-items-center"
-        >
-            <h1 className="pb-3 text-2xl text-center">
-                <span className="ul">&nbsp;Where the City Moves as One&nbsp;</span>
-            </h1>
-            <p className="max-w-[85ch]">
-                Manila comes alive with the sound of Salsa, Bachata, Kizomba, and Zouk. For three exhilarating days, the festival transforms into a playground of rhythm and connection. Learn from world-class instructors, share unforgettable moments with dancers from around the globe, and let the nights sweep you into music and motion that never let go. This isn&apos;t just a festival—it&apos;s a movement, and you&apos;re at the heart of it.
-            </p>
-            <div className="text-center font-header flex flex-wrap content-end justify-center">
-                <Link href="/tickets" className="px-6 cta cta-solid rounded">
-                    <span className="h3 text-[1.2rem]">Grab Your Pass and Let&apos;s Dance</span>
-                </Link>
-            </div >
-        </div >
+        <section id="preface" className="bg-[#f4eee4] px-5 py-20 text-[#17101f] sm:px-8 sm:py-28 lg:px-12">
+            <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="eyebrow text-[#70416f]">A weekend for movement</p><h2 className="mt-4 max-w-xl text-5xl font-semibold leading-[.9] tracking-[-.06em] sm:text-7xl">Come for the rhythm. Stay for the people.</h2></div><div className="max-w-2xl"><p className="text-lg leading-8 text-[#3d3141]">Manila comes alive with Salsa, Bachata, Kizomba, and Zouk. For three exhilarating days, the festival becomes a playground of rhythm and connection, pairing world-class instruction with nights that refuse to slow down.</p><Link href="/tickets" className="cta cta-solid mt-8 inline-flex px-6 py-3.5 text-sm uppercase tracking-[.14em]">Find your place</Link></div></div>
+        </section>
     );
 }

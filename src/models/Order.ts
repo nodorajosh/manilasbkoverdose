@@ -1,20 +1,29 @@
-// models/Order.ts
 import { Schema, model, models } from "mongoose";
 
 const OrderItemSchema = new Schema({
     ticketId: { type: Schema.Types.ObjectId, ref: "Ticket", required: true },
     name: String,
-    price: Number, // store price at time of purchase (same unit you use in Ticket.price)
+    price: Number,
     currency: String,
     quantity: Number,
 });
 
+const PaypalCaptureSchema = new Schema(
+    {
+        id: { type: String, required: true },
+        amount: Schema.Types.Mixed,
+    },
+    { _id: false }
+);
+
 const PaymentDetailsSchema = new Schema(
     {
-        method: { type: String }, // e.g. 'wise', 'stripe', etc.
+        method: String,
         paymentLink: { type: String, default: null },
         depositInstructions: { type: String, default: null },
-        // you can add more fields here later (e.g. payinReference)
+        paypalOrderId: { type: String, default: null },
+        referenceId: { type: String, default: null },
+        paypalCapture: { type: [PaypalCaptureSchema], default: [] },
     },
     { _id: false }
 );
@@ -31,13 +40,20 @@ const WiseMetaSchema = new Schema(
 const OrderSchema = new Schema(
     {
         userId: { type: String, required: true },
-        userEmail: { type: String, required: false },
+        userEmail: String,
         items: [OrderItemSchema],
         totalAmount: { type: Number, required: true },
         currency: { type: String, required: true },
-        status: { type: String, enum: ["pending", "paid", "failed", "cancelled"], default: "pending" },
+        status: {
+            type: String,
+            enum: ["pending", "paid", "failed", "cancelled", "refunded", "fulfilled"],
+            default: "pending",
+        },
         paymentDetails: PaymentDetailsSchema,
         wise: WiseMetaSchema,
+        metadata: Schema.Types.Mixed,
+        paymentConfirmedAt: Date,
+        cancelledAt: Date,
     },
     { timestamps: true }
 );

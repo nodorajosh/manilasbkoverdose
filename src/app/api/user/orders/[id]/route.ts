@@ -1,4 +1,3 @@
-// app/api/user/orders/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
@@ -14,25 +13,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         const { id } = await params;
         if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+        if (id !== session.user.email && session.user.role !== "admin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        }
 
         await connectMongoose();
-
-        const orders = await Order.find({ "userId": id })
+        const orders = await Order.find({ userId: id })
             .sort({ createdAt: -1 })
             .populate("items.ticketId")
             .lean();
-
         return NextResponse.json({ orders });
-    } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (err) {
         console.error("User orders GET failed:", err);
         return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
     }
 }
 
-/**
- * PATCH - allow the user to cancel their own pending orders
- * body: { _id: string, status: 'cancelled' | 'request-cancel' }
- */
 export async function PATCH(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -42,24 +38,19 @@ export async function PATCH(req: Request) {
 
         const body = await req.json();
         const { _id, status } = body as { _id?: string; status?: string };
-
         if (!_id || !status) {
             return NextResponse.json({ error: "_id and status required" }, { status: 400 });
         }
 
         await connectMongoose();
-
         const order = await Order.findById(_id);
         if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
-
-        // ensure owner
         if (String(order.userId) !== session.user.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        // only allow cancellation from certain states
         if (status === "cancelled") {
-            if (!["pending", "created"].includes(order.status)) {
+            if (order.status !== "pending") {
                 return NextResponse.json({ error: "Cannot cancel order in this status" }, { status: 400 });
             }
             order.status = "cancelled";
@@ -68,9 +59,8 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ order });
         }
 
-        // unrecognized
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    } catch (err: any) { //eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (err) {
         console.error("User orders PATCH failed:", err);
         return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
     }

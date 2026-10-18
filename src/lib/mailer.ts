@@ -22,7 +22,7 @@ export async function sendMail({
 }) {
     try {
         await transporter.sendMail({
-            from: '"Ticketing" <no-reply@manilasbkzoverdose.com>',
+            from: process.env.EMAIL_FROM ?? '"Ticketing" <no-reply@manila.sbkzoverdose.com>',
             to,
             subject,
             html,

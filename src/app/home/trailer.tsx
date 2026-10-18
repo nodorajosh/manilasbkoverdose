@@ -1,36 +1,27 @@
+"use client";
+
+import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
+import { fetchBrandingAssets } from "@/lib/fetch-branding";
+import type { BrandingAsset } from "@/lib/branding-assets";
 
 export default function Trailer() {
+    const [trailer, setTrailer] = useState<BrandingAsset | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        fetchBrandingAssets().then((assets) => {
+            if (active) setTrailer(assets?.trailer ?? null);
+        }).catch(() => undefined);
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
     return (
-        <div
-            id="trailer"
-            className="bg-black text-white relative flex flex-row flex-wrap"
-        >
-            <div className="px-6 pt-12 pb-2 lg:pb-12 w-full lg:w-[67%]">
-                <iframe
-                    src="https://www.youtube.com/embed/CbGNqqe3Zuw?si=Soe7H1ZOWUas9Ku8"
-                    width="100%"
-                    height="100%"
-                    className="aspect-video"
-                    allowFullScreen
-                />
-            </div>
-            {/* <div className="pl-6 w-full lg:w-[33%] flex flex-col flex-wrap justify-center content-center"> */}
-            <div className="relative px-6 pt-2 lg:pt-12 pb-12 w-full lg:w-[33%] bg-black grid place-items-center z-5">
-                <div className="glow px-6 py-6 shadow flex flex-col flex-wrap justify-center content-center bg-gradient-to-tr from-peach-800 via-neutral-dark via-black via-neutral-dark to-peach-800 rounded">
-                    <h1 className="text-2xl text-center">
-                        <span className="ul">&nbsp;Feel the Pulse Before It Begins&nbsp;</span>
-                    </h1>
-                    <p className="py-4 max-w-[85ch]">
-                        Hit play and let the story unfold. Bright lights, powerful beats, and dancers moving as one—this is the heartbeat of SBKZ. From sunrise workshops that spark growth to late-night socials that never seem to end, our festival trailer gives you a taste of the rhythm, the passion, and the unforgettable nights waiting in Manila.
-                    </p>
-                    <div className="text-center font-header flex flex-wrap content-end justify-center">
-                        <Link href="/tickets" className="px-6 cta cta-solid rounded">
-                            <span className="h3 text-[1.2rem]">Join the Celebration</span>
-                        </Link>
-                    </div>
-                </div>
-            </div >
-        </div >
+        <section id="trailer" className="bg-[#0d0a12] px-5 py-20 text-white sm:px-8 sm:py-28 lg:px-12"><div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1.4fr_.6fr] lg:items-center"><div className="relative aspect-video overflow-hidden rounded-[1.75rem] border border-white/10 bg-black shadow-2xl shadow-black/40">{trailer?.resource_type === "video" ? <video src={trailer.url} className="h-full w-full object-cover" controls playsInline /> : trailer ? <Image src={trailer.url} alt="Manila SBKZ Overdose trailer" fill unoptimized className="object-cover" /> : <iframe src="https://www.youtube.com/embed/CbGNqqe3Zuw?si=Soe7H1ZOWUas9Ku8" width="100%" height="100%" className="absolute inset-0" allowFullScreen title="Manila SBKZ Overdose festival trailer" />}</div><div className="rounded-[1.75rem] border border-[#f3d78a]/25 bg-[radial-gradient(circle_at_80%_10%,rgba(243,215,138,.2),transparent_26%),linear-gradient(145deg,rgba(82,33,102,.5),rgba(255,255,255,.03))] p-7 sm:p-9"><p className="eyebrow text-[#f3d78a]">Feel the pulse</p><h2 className="mt-4 text-4xl font-semibold leading-[.95] tracking-[-.05em]">This is your invitation.</h2><p className="mt-5 text-sm leading-7 text-white/60">Bright lights, powerful beats, and dancers moving as one. Press play, then step into the story.</p><Link href="/tickets" className="cta cta-solid mt-7 inline-flex px-5 py-3 text-sm uppercase tracking-[.12em]">Join the celebration</Link></div></div></section>
     );
 }

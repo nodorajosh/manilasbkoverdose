@@ -1,10 +1,22 @@
-// app/api/paypal/webhook/route.ts
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { verifyPaypalWebhook } from "@/lib/paypal";
 import { connectMongoose } from "@/lib/mongoose";
 import Order from "@/models/Order";
 import { Ticket } from "@/models/Ticket";
 import { sendMail } from "@/lib/mailer";
+
+type PaypalResource = {
+    id?: string;
+    order_id?: string;
+    invoice_id?: string;
+    amount?: unknown;
+    supplementary_data?: {
+        related_ids?: {
+            order_id?: string;
+        };
+    };
+};
 
 export async function POST(req: Request) {
     try {
@@ -15,78 +27,100 @@ export async function POST(req: Request) {
             "paypal-cert-url": req.headers.get("paypal-cert-url") ?? "",
             "paypal-auth-algo": req.headers.get("paypal-auth-algo") ?? "",
         };
-
-        const body = await req.json();
-
-        // verify signature
-        const ok = await verifyPaypalWebhook(headers, body);
-        if (!ok) {
+        const body = await req.json() as { event_type?: string; resource?: PaypalResource };
+        if (!await verifyPaypalWebhook(headers, body)) {
             console.warn("PayPal webhook signature verification failed");
             return NextResponse.json({ ok: false }, { status: 400 });
         }
 
         await connectMongoose();
-
-        const eventType = body.event_type as string;
-        // handle payment capture completed
-        if (eventType === "PAYMENT.CAPTURE.COMPLETED" || eventType === "CHECKOUT.ORDER.APPROVED" || eventType === "PAYMENT.CAPTURE.DENIED") {
-            // extract resource
-            const resource = body.resource as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-            // resource will vary; try to find reference or invoice_id
-            const referenceId = resource.supplementary_data?.related_ids?.order_id ?? resource.invoice_id ?? resource.order_id ?? resource.id;
-            // try to match Order.paymentDetails.paypalOrderId or reference_id
-            const order = await Order.findOne({
-                $or: [
-                    { "paymentDetails.paypalOrderId": referenceId },
-                    { "paymentDetails.paypalOrderId": resource.order_id },
-                    { "paymentDetails.referenceId": referenceId },
-                    { _id: referenceId },
-                ],
-            });
-
-            if (!order) {
-                console.warn("Webhook couldn't find order for reference:", referenceId);
-                return NextResponse.json({ ok: true });
-            }
-
-            if (eventType === "PAYMENT.CAPTURE.COMPLETED") {
-                order.status = "paid";
-                order.paymentConfirmedAt = new Date();
-                order.paymentDetails = order.paymentDetails ?? {};
-                order.paymentDetails.paypalCapture = order.paymentDetails.paypalCapture ?? [];
-                // push resource id
-                order.paymentDetails.paypalCapture.push({ id: resource.id, amount: resource.amount ?? null });
-                await order.save();
-
-                // decrement inventory
-                if (Array.isArray(order.items)) {
-                    for (const it of order.items) {
-                        if (it.ticketId) {
-                            await Ticket.updateOne({ _id: it.ticketId }, { $inc: { sold: it.quantity ?? 1 } });
-                        }
-                    }
-                }
-
-                // send confirmation email
-                try {
-                    await sendMail({
-                        to: order.userEmail,
-                        subject: "Payment confirmed",
-                        html: `<p>Your payment for order ${order._id} is complete.</p>`,
-                    });
-                } catch (e) {
-                    console.warn("webhook sendMail failed", e);
-                }
-            } else if (eventType === "PAYMENT.CAPTURE.DENIED") {
-                order.status = "failed";
-                await order.save();
-            }
-
+        const eventType = body.event_type;
+        if (eventType !== "PAYMENT.CAPTURE.COMPLETED" && eventType !== "PAYMENT.CAPTURE.DENIED") {
             return NextResponse.json({ ok: true });
         }
 
+        const resource = body.resource ?? {};
+        const paypalOrderIds = [
+            resource.supplementary_data?.related_ids?.order_id,
+            resource.order_id,
+        ].filter((value): value is string => Boolean(value));
+        const orderFilters: Record<string, unknown>[] = paypalOrderIds.map((value) => ({
+            "paymentDetails.paypalOrderId": value,
+        }));
+        if (resource.invoice_id && mongoose.isValidObjectId(resource.invoice_id)) {
+            orderFilters.push({ _id: resource.invoice_id });
+        }
+        if (orderFilters.length === 0) {
+            console.warn("Webhook missing an order reference");
+            return NextResponse.json({ ok: true });
+        }
+
+        const order = await Order.findOne({ $or: orderFilters });
+        if (!order) {
+            console.warn("Webhook couldn't find order for references:", paypalOrderIds);
+            return NextResponse.json({ ok: true });
+        }
+
+        if (eventType === "PAYMENT.CAPTURE.DENIED") {
+            await Order.updateOne({ _id: order._id, status: "pending" }, { $set: { status: "failed" } });
+            return NextResponse.json({ ok: true });
+        }
+
+        const transitioned = await Order.findOneAndUpdate(
+            {
+                _id: order._id,
+                status: { $ne: "paid" },
+                paymentConfirmedAt: null,
+            },
+            {
+                $set: {
+                    status: "paid",
+                    paymentConfirmedAt: new Date(),
+                },
+            },
+            { new: true }
+        );
+
+        if (resource.id) {
+            await Order.updateOne(
+                {
+                    _id: order._id,
+                    "paymentDetails.paypalCapture.id": { $ne: resource.id },
+                },
+                {
+                    $push: {
+                        "paymentDetails.paypalCapture": {
+                            id: resource.id,
+                            amount: resource.amount ?? null,
+                        },
+                    },
+                }
+            );
+        }
+
+        if (transitioned) {
+            for (const item of transitioned.items ?? []) {
+                if (item.ticketId) {
+                    await Ticket.updateOne(
+                        { _id: item.ticketId },
+                        { $inc: { sold: item.quantity ?? 1 } }
+                    );
+                }
+            }
+
+            try {
+                await sendMail({
+                    to: transitioned.userEmail ?? transitioned.userId,
+                    subject: "Payment confirmed",
+                    html: `<p>Your payment for order ${transitioned._id} is complete.</p>`,
+                });
+            } catch (error) {
+                console.warn("webhook sendMail failed", error);
+            }
+        }
+
         return NextResponse.json({ ok: true });
-    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (err) {
         console.error("paypal webhook error:", err);
         return NextResponse.json({ error: "webhook handler error" }, { status: 500 });
     }

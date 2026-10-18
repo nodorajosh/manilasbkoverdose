@@ -11,69 +11,29 @@ type CloudinaryImage = {
     height: number;
 };
 
-export default function ArtistsSectionComponent({
-    title,
-    blurb,
-    year,
-}: {
-    title: string;
-    blurb: string;
-    year: string;
-}) {
+export default function ArtistsSectionComponent({ title, category, blurb, year }: { title: string; category: string; blurb: string; year: string }) {
     const [images, setImages] = useState<CloudinaryImage[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let active = true;
         setLoading(true);
-
-        fetchArtistImages(year, title)
-            .then(setImages)
-            .finally(() => setLoading(false));
-    }, [year, title]);
+        fetchArtistImages(year, category).then((nextImages) => {
+            if (active) setImages(nextImages);
+        }).finally(() => {
+            if (active) setLoading(false);
+        });
+        return () => {
+            active = false;
+        };
+    }, [year, category, title]);
 
     return (
-        <div className="relative flex flex-row flex-wrap">
-            <div className="px-6 pt-12 pb-2 lg:pb-12 lg:min-h-[56dvh] w-full lg:w-[33%] bg-(--color-neutral-dark) grid place-items-center z-5">
-                <div className="glow px-6 py-6 shadow flex flex-col flex-wrap justify-center content-center bg-gradient-to-tr from-peach-800 via-neutral-dark via-black via-neutral-dark to-peach-800 rounded">
-                    <h1 className="text-2xl text-center">
-                        <span>&nbsp;{title}&nbsp;</span>
-                    </h1>
-                    <p className="pt-4 max-w-[85ch]">{blurb}</p>
-                </div>
+        <section className="mx-auto grid min-h-[28rem] w-full max-w-7xl gap-0 border-b border-white/10 lg:grid-cols-[.4fr_1fr] lg:min-h-[34rem]">
+            <div className="flex items-center bg-[#0d0a12] px-5 py-12 sm:px-8 lg:px-12"><div><p className="eyebrow text-[#f3d78a]">{year}</p><h3 className="mt-3 text-3xl font-semibold tracking-[-.04em]">{title}</h3><p className="mt-4 max-w-sm text-sm leading-7 text-white/50">{blurb}</p></div></div>
+            <div className="relative flex min-w-0 items-center overflow-hidden bg-[#100c16] py-5">
+                {loading ? <div className="grid min-h-[20rem] w-full place-items-center text-sm text-white/35">Curating the lineup...</div> : images.length > 0 ? <div className="image-section w-full"><div className="min-w-8" />{images.map((image) => <Image key={image.public_id} src={image.url} alt={`${title} artist`} width={image.width || 600} height={image.height || 600} className="mx-2 h-[20rem] w-auto rounded-2xl object-cover sm:h-[25rem]" unoptimized />)}<div className="min-w-8" /></div> : <div className="grid min-h-[20rem] w-full place-items-center text-sm italic text-white/35">Artists coming soon...</div>}
             </div>
-
-            <div className="relative w-full lg:w-[67%] grid place-items-center">
-                {loading ? (
-                    <div className="image-section max-w-full min-h-[40dvh] lg:min-h-[56dvh] flex items-center justify-center">
-                        <p className="text-sm opacity-50">Loading…</p>
-                    </div>
-                ) : images.length > 0 ? (
-                    <div className="image-section max-w-full min-h-[40dvh] lg:min-h-[56dvh]">
-                        <div className="min-w-[9dvh] lg:min-w-[13dvh]">&nbsp;</div>
-
-                        {images.map((img, k) => (
-                            <Image
-                                key={img.public_id + k}
-                                src={img.url}
-                                alt=""
-                                width={600}
-                                height={600}
-                                className="image mx-2 my-6 h-[32dvh] lg:h-[48dvh] w-auto rounded"
-                            />
-                        ))}
-
-                        <div className="min-w-[9dvh] lg:min-w-[13dvh]">&nbsp;</div>
-                    </div>
-                ) : (
-                    <div className="image-section max-w-full min-h-[40dvh] lg:min-h-[56dvh] flex-wrap content-center justify-center">
-                        <div className="min-w-[9dvh] lg:min-w-[13dvh]">&nbsp;</div>
-                        <p className="text-center text-lg italic opacity-50">
-                            Artists coming soon...
-                        </p>
-                        <div className="min-w-[9dvh] lg:min-w-[13dvh]">&nbsp;</div>
-                    </div>
-                )}
-            </div>
-        </div>
+        </section>
     );
 }

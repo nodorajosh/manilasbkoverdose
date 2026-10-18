@@ -1,7 +1,6 @@
-// components/contexts/CartContext.tsx  (or wherever your cart context file is)
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
 export type CartItem = {
@@ -11,7 +10,11 @@ export type CartItem = {
     ticketId: string;
     quantity: number;
     discountCode?: string | null;
-    discountedPrice?: number | null; // unit price after discount (decimal)
+    discountedPrice?: number | null;
+};
+
+type CartPayload = {
+    items?: CartItem[];
 };
 
 type CartContextType = {
@@ -21,189 +24,175 @@ type CartContextType = {
     addToCart: (name: string, price: number, currency: string, ticketId: string, quantity?: number, discountCode?: string | null, discountedPrice?: number | null) => Promise<void>;
     removeFromCart: (ticketId: string) => Promise<void>;
     clearCart: () => Promise<void>;
+    refreshCart: () => Promise<void>;
     updateQuantity: (ticketId: string, newQuantity: number) => Promise<void>;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+async function readCartResponse(response: Response): Promise<CartItem[]> {
+    const payload = await response.json().catch(() => null) as CartPayload & { error?: string; message?: string } | null;
+    if (!response.ok) {
+        throw new Error(payload?.error ?? payload?.message ?? "Cart request failed");
+    }
+    if (!payload || !Array.isArray(payload.items)) {
+        throw new Error("Cart response was invalid");
+    }
+    return payload.items;
+}
+
+function readLocalCart(): CartItem[] {
+    try {
+        const raw = window.localStorage.getItem("cart");
+        if (!raw) return [];
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error("Invalid cart");
+        return parsed.filter((item): item is CartItem => {
+            if (!item || typeof item !== "object") return false;
+            const value = item as Partial<CartItem>;
+            return typeof value.ticketId === "string" && typeof value.quantity === "number" && value.quantity > 0;
+        });
+    } catch {
+        window.localStorage.removeItem("cart");
+        return [];
+    }
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
 
+    const refreshCart = useCallback(async () => {
+        if (session?.user) {
+            const response = await fetch("/api/cart", { cache: "no-store" });
+            setCart(await readCartResponse(response));
+            return;
+        }
+        setCart(readLocalCart());
+    }, [session]);
+
     useEffect(() => {
-        const load = async () => {
-            if (session?.user) {
-                try {
-                    const res = await fetch("/api/cart");
-                    const data = await res.json();
-                    setCart(data?.items ?? []);
-                } catch (err) {
-                    console.error("Failed to load server cart:", err);
-                    setCart([]);
+        let active = true;
+        const loadCart = async () => {
+            try {
+                if (session?.user) {
+                    const response = await fetch("/api/cart", { cache: "no-store" });
+                    const items = await readCartResponse(response);
+                    if (active) setCart(items);
+                } else if (active) {
+                    setCart(readLocalCart());
                 }
-            } else {
-                const raw = localStorage.getItem("cart");
-                setCart(raw ? JSON.parse(raw) : []);
+            } catch {
+                if (active) setCart([]);
             }
         };
-        load();
+        void loadCart();
+        return () => {
+            active = false;
+        };
     }, [session]);
 
     useEffect(() => {
         if (!session?.user) {
             try {
-                localStorage.setItem("cart", JSON.stringify(cart));
-            } catch { }
+                window.localStorage.setItem("cart", JSON.stringify(cart));
+            } catch {
+                return;
+            }
         }
     }, [cart, session]);
 
-    const addToCart = useCallback(
-        async (ticketName: string, ticketPrice: number, ticketCurrency: string, ticketId: string, quantity = 1, discountCode: string | null = null, discountedPrice: number | null = null) => {
-            if (session?.user) {
-                await fetch("/api/cart", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ticketId, ticketName, ticketPrice, ticketCurrency, quantity, discountCode, discountedPrice }),
-                });
-                const res = await fetch("/api/cart");
-                const data = await res.json();
-                setCart(data.items ?? []);
-            } else {
-                setCart((prev) => {
-                    // If adding with a discount code, apply it to ALL entries of the same ticket
-                    if (discountCode) {
-                        const sameTicketEntries = prev.filter((p) => p.ticketId === ticketId);
-                        const otherEntries = prev.filter((p) => p.ticketId !== ticketId);
+    const addToCart = useCallback(async (
+        ticketName: string,
+        ticketPrice: number,
+        ticketCurrency: string,
+        ticketId: string,
+        quantity = 1,
+        discountCode: string | null = null,
+        discountedPrice: number | null = null,
+    ) => {
+        const safeQuantity = Math.max(1, Math.floor(quantity));
+        if (session?.user) {
+            const response = await fetch("/api/cart", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketId, ticketName, ticketPrice, ticketCurrency, quantity: safeQuantity, discountCode, discountedPrice }),
+            });
+            setCart(await readCartResponse(response));
+        } else {
+            setCart((previous) => {
+                const matching = previous.filter((item) => item.ticketId === ticketId);
+                const others = previous.filter((item) => item.ticketId !== ticketId);
+                const totalQuantity = matching.reduce((sum, item) => sum + item.quantity, 0) + safeQuantity;
+                return [
+                    ...others,
+                    {
+                        ticketName,
+                        ticketPrice,
+                        ticketCurrency,
+                        ticketId,
+                        quantity: totalQuantity,
+                        discountCode,
+                        discountedPrice,
+                    },
+                ];
+            });
+        }
+        setIsCartOpen(true);
+    }, [session]);
 
-                        // Sum all quantities from same-ticket entries plus the new quantity
-                        const totalQty = sameTicketEntries.reduce((sum, p) => sum + p.quantity, 0) + quantity;
-
-                        return [
-                            ...otherEntries,
-                            {
-                                ticketName,
-                                ticketPrice,
-                                ticketCurrency,
-                                ticketId,
-                                quantity: totalQty,
-                                discountCode,
-                                discountedPrice,
-                            },
-                        ];
-                    }
-
-                    // No discount — just increment or add as before
-                    const found = prev.find((p) => p.ticketId === ticketId && p.discountCode === discountCode);
-                    if (found) {
-                        return prev.map((p) =>
-                            p.ticketId === ticketId && p.discountCode === discountCode
-                                ? { ...p, quantity: p.quantity + quantity }
-                                : p
-                        );
-                    }
-                    return [...prev, { ticketName, ticketPrice, ticketCurrency, ticketId, quantity, discountCode: null, discountedPrice: null }];
-                });
-            }
-            setIsCartOpen(true); // auto-open cart after adding
-        },
-        [session]
-    );
-
-    const removeFromCart = useCallback(
-        async (ticketId: string) => {
-            if (session?.user) {
-                await fetch(`/api/cart?ticketId=${encodeURIComponent(ticketId)}`, { method: "DELETE" });
-                const res = await fetch("/api/cart");
-                const data = await res.json();
-                setCart(data.items ?? []);
-            } else {
-                setCart((prev) => prev.filter((p) => p.ticketId !== ticketId));
-            }
-        },
-        [session]
-    );
+    const removeFromCart = useCallback(async (ticketId: string) => {
+        if (session?.user) {
+            const response = await fetch(`/api/cart?ticketId=${encodeURIComponent(ticketId)}`, { method: "DELETE" });
+            setCart(await readCartResponse(response));
+            return;
+        }
+        setCart((previous) => previous.filter((item) => item.ticketId !== ticketId));
+    }, [session]);
 
     const clearCart = useCallback(async () => {
         if (session?.user) {
-            await fetch("/api/cart", { method: "DELETE" });
+            const response = await fetch("/api/cart", { method: "DELETE" });
+            if (!response.ok && response.status !== 404) {
+                await readCartResponse(response);
+            }
         }
         setCart([]);
     }, [session]);
 
-    /**
-     * updateQuantity - set item quantity to an absolute value
-     *
-     * Implementation notes:
-     * - For guests: local update + localStorage.
-     * - For logged-in users: we use the existing API:
-     *    - If newQty > existingQty: call POST with delta (server increments).
-     *    - If newQty === 0: call DELETE to remove.
-     *    - If newQty < existingQty: call DELETE to remove then POST with newQty to set absolute.
-     * This avoids adding a new backend endpoint.
-     */
-    const updateQuantity = useCallback(
-        async (ticketId: string, newQuantity: number) => {
-            newQuantity = Math.max(0, Math.floor(newQuantity ?? 0));
-            if (!session?.user) {
-                setCart((prev) => {
-                    if (newQuantity <= 0) return prev.filter((i) => i.ticketId !== ticketId);
-                    return prev.map((i) => (i.ticketId === ticketId ? { ...i, quantity: newQuantity } : i));
-                });
-                return;
-            }
+    const updateQuantity = useCallback(async (ticketId: string, newQuantity: number) => {
+        const safeQuantity = Math.max(0, Math.floor(Number.isFinite(newQuantity) ? newQuantity : 0));
+        if (!session?.user) {
+            setCart((previous) => safeQuantity === 0
+                ? previous.filter((item) => item.ticketId !== ticketId)
+                : previous.map((item) => item.ticketId === ticketId ? { ...item, quantity: safeQuantity } : item));
+            return;
+        }
 
-            // logged-in server flow
-            // fetch current cart to determine existing value (prefer local state)
-            const existing = cart.find((c) => c.ticketId === ticketId)?.quantity ?? 0;
+        if (safeQuantity === 0) {
+            const response = await fetch(`/api/cart?ticketId=${encodeURIComponent(ticketId)}`, { method: "DELETE" });
+            setCart(await readCartResponse(response));
+            return;
+        }
 
-            try {
-                if (newQuantity <= 0) {
-                    // remove entirely                    
-                    await fetch(`/api/cart?ticketId=${encodeURIComponent(ticketId)}`, { method: "DELETE" });
-                } else if (newQuantity > existing) {
-                    // increment by delta
-                    const delta = newQuantity - existing;
-                    await fetch("/api/cart", {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ticketId, quantity: delta }),
-                    });
-                } else if (newQuantity < existing) {
-                    // no direct decrement endpoint: remove and re-add with newQuantity
-                    await fetch(`/api/cart?ticketId=${encodeURIComponent(ticketId)}`, { method: "DELETE" });
-                    // re-add with newQty
-                    await fetch("/api/cart", {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ticketId, quantity: newQuantity }),
-                    });
-                }
-            } catch (err) {
-                console.error("updateQuantity (server) failed:", err);
-            } finally {
-                // refresh server cart to get canonical state
-                try {
-                    const res = await fetch("/api/cart");
-                    const data = await res.json();
-                    setCart(data.items ?? []);
-                } catch (err) {
-                    console.error("Failed to refresh cart after update:", err);
-                }
-            }
-        },
-        [cart, session]
-    );
+        const response = await fetch("/api/cart", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticketId, quantity: safeQuantity }),
+        });
+        setCart(await readCartResponse(response));
+    }, [session]);
 
     return (
-        <CartContext.Provider value={{ cart, isCartOpen, setCartOpen: setIsCartOpen, addToCart, removeFromCart, clearCart, updateQuantity }}>
+        <CartContext.Provider value={{ cart, isCartOpen, setCartOpen: setIsCartOpen, addToCart, removeFromCart, clearCart, refreshCart, updateQuantity }}>
             {children}
         </CartContext.Provider>
     );
 }
 
 export const useCartContext = () => {
-    const ctx = useContext(CartContext);
-    if (!ctx) throw new Error("useCartContext must be used inside CartProvider");
-    return ctx;
+    const context = useContext(CartContext);
+    if (!context) throw new Error("useCartContext must be used inside CartProvider");
+    return context;
 };
