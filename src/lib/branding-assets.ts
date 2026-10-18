@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import cloudinary from "@/lib/cloudinary";
 
 export type BrandingAsset = {
@@ -54,7 +56,7 @@ async function getAsset(folder: string): Promise<BrandingAsset | null> {
     };
 }
 
-export async function getBrandingAssets(): Promise<BrandingAssets> {
+async function loadBrandingAssets(): Promise<BrandingAssets> {
     const yearFolder = await getLatestBrandingYear();
     const base = yearFolder?.path ?? "mnl-sbkz/branding";
     const [logo, hero, trailer] = await Promise.all([
@@ -70,3 +72,7 @@ export async function getBrandingAssets(): Promise<BrandingAssets> {
         trailer,
     };
 }
+
+export const getBrandingAssets = unstable_cache(loadBrandingAssets, ["branding-assets"], {
+    revalidate: 300,
+});

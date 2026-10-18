@@ -8,6 +8,16 @@ import { ArtistYear, fetchArtistFolders } from "@/lib/fetch-artists";
 import ArtistsSectionComponent from "./artist-section.component";
 
 const FIRST_EDITION_YEAR = 2023;
+const CATEGORY_ORDER = [
+    "Main Artists",
+    "Additional International Artists",
+    "Local Artists",
+    "Performers",
+    "DJs",
+    "Ambassadors",
+    "Hosts",
+    "Event Organizers",
+];
 
 const CATEGORY_BLURBS: Record<string, string> = {
     "Main Artists": "World-renowned talents bringing electrifying performances and unmatched expertise to the stage.",
@@ -58,6 +68,11 @@ export default function ArtistsPageComponent() {
     }, []);
 
     const selectedYear = years.find((item) => item.name === year);
+    const categories = [...(selectedYear?.categories ?? [])].sort((a, b) => {
+        const aIndex = CATEGORY_ORDER.indexOf(formatCategoryName(a.name));
+        const bIndex = CATEGORY_ORDER.indexOf(formatCategoryName(b.name));
+        return (aIndex === -1 ? CATEGORY_ORDER.length : aIndex) - (bIndex === -1 ? CATEGORY_ORDER.length : bIndex);
+    });
     const edition = year ? editionLabel(year) : "Loading lineup";
 
     return (
@@ -79,7 +94,7 @@ export default function ArtistsPageComponent() {
                 <div className="rounded-[1.75rem] border border-[#f3d78a]/25 bg-[radial-gradient(circle_at_85%_10%,rgba(243,215,138,.18),transparent_25%),linear-gradient(120deg,rgba(91,35,112,.45),rgba(255,255,255,.03))] p-6 sm:p-8"><p className="eyebrow text-[#bff4df]">Manila SBKZ Overdose</p><div className="mt-3 flex flex-wrap items-end justify-between gap-4"><h3 className="text-3xl font-semibold tracking-[-.04em] sm:text-5xl">{edition}</h3><span className="text-sm text-white/45">{year || "—"} · Manila, Philippines</span></div></div>
             </div>
             <div className="mt-10">
-                {selectedYear?.categories.map((category) => {
+                {categories.map((category) => {
                     const title = formatCategoryName(category.name);
                     return <ArtistsSectionComponent key={category.path} year={year} category={category.name} title={title} blurb={CATEGORY_BLURBS[category.name] ?? "Artists shaping the energy and spirit of this year's celebration."} />;
                 })}

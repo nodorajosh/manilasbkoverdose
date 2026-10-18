@@ -6,6 +6,7 @@ type CloudinaryResource = {
     secure_url?: string;
     width?: number;
     height?: number;
+    created_at?: string;
 };
 
 export async function GET(req: NextRequest) {
@@ -35,9 +36,13 @@ export async function GET(req: NextRequest) {
                 url: resource.secure_url as string,
                 width: resource.width ?? 0,
                 height: resource.height ?? 0,
+                created_at: resource.created_at ?? "",
             }));
 
-        images.sort((a, b) => a.public_id.localeCompare(b.public_id));
+        images.sort((a, b) => {
+            const createdAtComparison = a.created_at.localeCompare(b.created_at);
+            return createdAtComparison || a.public_id.localeCompare(b.public_id);
+        });
 
         return NextResponse.json({ images });
     } catch (err) {
