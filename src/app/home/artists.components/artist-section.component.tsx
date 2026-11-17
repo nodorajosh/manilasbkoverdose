@@ -2,7 +2,7 @@
 
 import { fetchArtistImages } from "@/lib/fetch-artists";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type CloudinaryImage = {
     public_id: string;
@@ -14,6 +14,7 @@ type CloudinaryImage = {
 export default function ArtistsSectionComponent({ title, category, blurb, year }: { title: string; category: string; blurb: string; year: string }) {
     const [images, setImages] = useState<CloudinaryImage[]>([]);
     const [loading, setLoading] = useState(true);
+    const galleryRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         let active = true;
@@ -28,11 +29,36 @@ export default function ArtistsSectionComponent({ title, category, blurb, year }
         };
     }, [year, category, title]);
 
+    const scrollGallery = (direction: number) => {
+        galleryRef.current?.scrollBy({ left: direction * Math.min(640, window.innerWidth * .75), behavior: "smooth" });
+    };
+
     return (
-        <section className="mx-auto grid min-h-[28rem] w-full min-w-0 max-w-7xl gap-0 border-b border-white/10 lg:grid-cols-[.4fr_1fr] lg:min-h-[34rem]">
-            <div className="flex items-center bg-[#0d0a12] px-5 py-12 sm:px-8 lg:px-12"><div><p className="eyebrow text-[#f3d78a]">{year}</p><h3 className="mt-3 text-3xl font-semibold tracking-[-.04em]">{title}</h3><p className="mt-4 max-w-sm text-sm leading-7 text-white/50">{blurb}</p></div></div>
-            <div className="relative flex min-w-0 items-center overflow-hidden bg-[#100c16] py-5">
-                {loading ? <div className="grid min-h-[20rem] w-full place-items-center text-sm text-white/35">Curating the lineup...</div> : images.length > 0 ? <div className="image-section w-full min-w-0 max-w-full"><div className="min-w-8 shrink-0" />{images.map((image) => <Image key={image.public_id} src={image.url} alt={`${title} artist`} width={image.width || 600} height={image.height || 600} className="mx-2 h-[20rem] w-auto shrink-0 rounded-2xl object-cover sm:h-[25rem]" unoptimized />)}<div className="min-w-8 shrink-0" /></div> : <div className="grid min-h-[20rem] w-full place-items-center text-sm italic text-white/35">Artists coming soon...</div>}
+        <section className="border-b border-white/25 lg:grid lg:grid-cols-[.34fr_.66fr]">
+            <div className="flex items-end px-5 py-9 sm:px-8 lg:px-12 lg:py-12">
+                <div>
+                    <h3 className="max-w-sm font-header text-4xl uppercase leading-[.95] text-paper sm:text-5xl">{title}</h3>
+                    <p className="mt-4 max-w-sm text-base leading-7 text-paper/65">{blurb}</p>
+                    {!loading && images.length > 1 && (
+                        <div className="mt-6 flex gap-2">
+                            <button type="button" onClick={() => scrollGallery(-1)} className="gallery-button" aria-label={`Previous artists in ${title}`}>←</button>
+                            <button type="button" onClick={() => scrollGallery(1)} className="gallery-button" aria-label={`Next artists in ${title}`}>→</button>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div className="min-w-0 border-t border-white/25 lg:border-l lg:border-t-0">
+                {loading ? (
+                    <div className="grid min-h-[25rem] w-full place-items-center px-5 text-sm text-paper/60">Loading the artists...</div>
+                ) : images.length > 0 ? (
+                    <div ref={galleryRef} className="image-section w-full gap-4 px-5 py-5 sm:px-8 lg:px-8" tabIndex={0} aria-label={`${title} gallery`}>
+                        {images.map((image) => (
+                            <Image key={image.public_id} src={image.url} alt={`${title} artist at Manila SBKZ Overdose`} width={image.width || 600} height={image.height || 800} className="h-[22rem] w-[17rem] shrink-0 snap-start object-cover sm:h-[28rem] sm:w-[22rem]" unoptimized />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid min-h-[25rem] w-full place-items-center px-5 text-base text-paper/60">Artists coming soon.</div>
+                )}
             </div>
         </section>
     );

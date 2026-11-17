@@ -6,24 +6,19 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 
 import { useCartContext } from "@/contexts/CartContext";
+import ArrowIcon from "@/components/arrow-icon";
 import CA from "../../assets/images/cart.svg";
 import CartSidebar from "../cart";
 
 const navlinks = [
-    { title: "Trailer", link: "/#trailer" },
-    { title: "Artists", link: "/#artists" },
+    { title: "The weekend", link: "/#preface" },
+    { title: "Film", link: "/#trailer" },
+    { title: "Lineup", link: "/#artists" },
 ];
 
 function ChevronIcon({ open }: { open: boolean }) {
     return (
-        <svg
-            aria-hidden="true"
-            className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="1.8"
-        >
+        <svg aria-hidden="true" className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
             <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
         </svg>
     );
@@ -32,9 +27,9 @@ function ChevronIcon({ open }: { open: boolean }) {
 function MenuIcon({ open }: { open: boolean }) {
     return (
         <span className="relative block h-5 w-5" aria-hidden="true">
-            <span className={`absolute left-0 top-1 block h-px w-5 bg-current transition-transform duration-200 ${open ? "translate-y-2 rotate-45" : ""}`} />
-            <span className={`absolute left-0 top-3 block h-px w-5 bg-current transition-opacity duration-200 ${open ? "opacity-0" : ""}`} />
-            <span className={`absolute left-0 top-5 block h-px w-5 bg-current transition-transform duration-200 ${open ? "-translate-y-2 -rotate-45" : ""}`} />
+            <span className={`absolute left-0 top-1 block h-0.5 w-5 bg-current transition-transform duration-200 ${open ? "translate-y-2 rotate-45" : ""}`} />
+            <span className={`absolute left-0 top-3 block h-0.5 w-5 bg-current transition-opacity duration-200 ${open ? "opacity-0" : ""}`} />
+            <span className={`absolute left-0 top-5 block h-0.5 w-5 bg-current transition-transform duration-200 ${open ? "-translate-y-2 -rotate-45" : ""}`} />
         </span>
     );
 }
@@ -83,92 +78,51 @@ export default function Navlinks() {
     };
 
     return (
-        <div ref={navRef} className="relative flex items-center gap-2 text-white">
-            <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+        <div ref={navRef} className="relative flex items-center gap-2 text-white sm:gap-3">
+            <nav className="hidden items-center gap-6 md:flex" aria-label="Main navigation">
                 {navlinks.map((navlink) => (
-                    <Link
-                        key={navlink.title}
-                        href={navlink.link}
-                        className="rounded-full px-4 py-2 text-[.68rem] font-semibold uppercase tracking-[.16em] text-white/65 transition hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
-                    >
+                    <Link key={navlink.title} href={navlink.link} className="nav-link py-3 text-xs font-semibold uppercase tracking-[.1em] text-white/80">
                         {navlink.title}
                     </Link>
                 ))}
-                <Link href="/tickets" className="cta cta-solid ml-2 px-5 py-2.5 text-[.68rem] uppercase tracking-[.16em]">
-                    Tickets
-                </Link>
+                <Link href="/tickets" className="cta cta-solid ml-1 px-5 py-3 text-xs">Tickets <ArrowIcon /></Link>
             </nav>
 
-            <button
-                type="button"
-                onClick={() => setCartOpen(true)}
-                className="focus-ring relative grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/75 transition hover:border-[#f3d78a]/60 hover:bg-white/10 hover:text-white"
-                aria-label={`Open cart${cartCount ? `, ${cartCount} item${cartCount === 1 ? "" : "s"}` : ""}`}
-            >
+            <button type="button" onClick={() => setCartOpen(true)} className="focus-ring relative grid h-10 w-10 place-items-center border border-white/30 text-white transition hover:border-gold hover:text-gold" aria-label={`Open cart${cartCount ? `, ${cartCount} item${cartCount === 1 ? "" : "s"}` : ""}`}>
                 <Image src={CA} alt="" width={17} height={17} />
-                {cartCount > 0 && <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#f3d78a] px-1 text-[.62rem] font-bold text-[#241507]">{cartCount}</span>}
+                {cartCount > 0 && <span className="absolute -right-2 -top-2 grid min-h-5 min-w-5 place-items-center bg-gold px-1 text-[.68rem] font-bold text-ink">{cartCount}</span>}
             </button>
 
             {session?.user ? (
                 <div className="relative">
-                    <button
-                        type="button"
-                        onClick={() => setAccountOpen((open) => !open)}
-                        className="focus-ring flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[.04] px-1.5 pr-3 transition hover:border-[#f3d78a]/60 hover:bg-white/10"
-                        aria-expanded={isAccountOpen}
-                        aria-haspopup="menu"
-                        aria-label="Open account menu"
-                    >
-                        <span className="grid h-7 w-7 place-items-center overflow-hidden rounded-full bg-[#f3d78a] text-xs font-bold text-[#241507]">
+                    <button type="button" onClick={() => setAccountOpen((open) => !open)} className="focus-ring flex h-10 items-center gap-2 border border-white/30 px-1.5 pr-2 transition hover:border-gold" aria-expanded={isAccountOpen} aria-haspopup="menu" aria-label="Open account menu">
+                        <span className="grid h-7 w-7 place-items-center overflow-hidden bg-gold text-xs font-bold text-ink">
                             {session.user.image ? <Image src={session.user.image} alt="" width={28} height={28} className="h-full w-full object-cover" /> : getInitials(session.user.name)}
                         </span>
                         <ChevronIcon open={isAccountOpen} />
                     </button>
-                    {isAccountOpen && (
-                        <AccountMenu isAdmin={session.user.role === "admin"} closeMenus={closeMenus} />
-                    )}
+                    {isAccountOpen && <AccountMenu isAdmin={session.user.role === "admin"} closeMenus={closeMenus} />}
                 </div>
             ) : (
-                <div className="relative hidden md:block">
-                    <button
-                        type="button"
-                        onClick={() => setAccountOpen((open) => !open)}
-                        className="focus-ring flex h-10 items-center gap-2 rounded-full border border-white/10 px-4 text-[.68rem] font-semibold uppercase tracking-[.16em] text-white/70 transition hover:border-[#f3d78a]/60 hover:bg-white/10 hover:text-white"
-                        aria-expanded={isAccountOpen}
-                        aria-haspopup="menu"
-                    >
-                        Sign in
-                        <ChevronIcon open={isAccountOpen} />
-                    </button>
-                    {isAccountOpen && <AccountMenu closeMenus={closeMenus} />}
-                </div>
+                <Link href="/auth/signin" className="nav-link hidden py-3 text-xs font-semibold uppercase tracking-[.1em] text-white/80 md:block">Sign in</Link>
             )}
 
-            <button
-                type="button"
-                onClick={() => setMenuOpen((open) => !open)}
-                className="focus-ring grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/80 transition hover:border-[#f3d78a]/60 hover:bg-white/10 md:hidden"
-                aria-expanded={isMenuOpen}
-                aria-controls="mobile-navigation"
-                aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-            >
+            <button type="button" onClick={() => setMenuOpen((open) => !open)} className="focus-ring grid h-10 w-10 place-items-center border border-white/30 text-white transition hover:border-gold hover:text-gold md:hidden" aria-expanded={isMenuOpen} aria-controls="mobile-navigation" aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}>
                 <MenuIcon open={isMenuOpen} />
             </button>
 
             {isMenuOpen && (
-                <nav id="mobile-navigation" className="absolute right-0 top-[calc(100%+0.75rem)] w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-[#120d18]/95 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
-                    <div className="flex flex-col gap-1">
+                <nav id="mobile-navigation" className="fixed inset-x-0 bottom-0 top-20 z-50 flex flex-col overflow-y-auto bg-gold px-5 py-8 text-ink md:hidden" aria-label="Mobile navigation">
+                    <div className="flex flex-col">
                         {navlinks.map((navlink) => (
-                            <Link key={navlink.title} href={navlink.link} onClick={closeMenus} className="rounded-xl px-4 py-3 text-sm uppercase tracking-[.14em] text-white/70 transition hover:bg-white/10 hover:text-white">
+                            <Link key={navlink.title} href={navlink.link} onClick={closeMenus} className="border-b border-ink py-5 font-header text-4xl uppercase leading-none">
                                 {navlink.title}
                             </Link>
                         ))}
-                        <Link href="/tickets" onClick={closeMenus} className="cta cta-solid mt-2 px-4 py-3 text-center text-sm uppercase tracking-[.14em]">
-                            Get your pass
-                        </Link>
-                        {!session?.user && <Link href="/auth/signin" onClick={closeMenus} className="rounded-xl px-4 py-3 text-sm uppercase tracking-[.14em] text-white/70 transition hover:bg-white/10 hover:text-white">Sign in</Link>}
-                        {session?.user && <AccountMenu isAdmin={session.user.role === "admin"} closeMenus={closeMenus} mobile />}
                     </div>
+                    <Link href="/tickets" onClick={closeMenus} className="cta cta-dark mt-8 px-5 py-4 text-center text-sm">Get your pass <ArrowIcon /></Link>
+                    {!session?.user && <Link href="/auth/signin" onClick={closeMenus} className="mt-5 py-3 text-sm font-semibold uppercase tracking-[.1em]">Sign in to your account</Link>}
+                    {session?.user && <AccountMenu isAdmin={session.user.role === "admin"} closeMenus={closeMenus} mobile />}
                 </nav>
             )}
 
@@ -179,10 +133,10 @@ export default function Navlinks() {
 
 function AccountMenu({ isAdmin = false, closeMenus, mobile = false }: { isAdmin?: boolean; closeMenus: () => void; mobile?: boolean }) {
     return (
-        <div className={mobile ? "mt-1 border-t border-white/10 pt-1" : "absolute right-0 top-[calc(100%+0.75rem)] z-50 w-44 rounded-2xl border border-white/10 bg-[#120d18]/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"} role="menu">
-            {isAdmin && <Link href="/admin" onClick={closeMenus} className="block rounded-xl px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white" role="menuitem">Admin</Link>}
-            <Link href="/user" onClick={closeMenus} className="block rounded-xl px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white" role="menuitem">Account</Link>
-            <button type="button" onClick={() => { closeMenus(); void signOut({ callbackUrl: "/" }); }} className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-white/70 transition hover:bg-white/10 hover:text-white" role="menuitem">Sign out</button>
+        <div className={mobile ? "mt-6 border-t border-ink pt-3" : "absolute right-0 top-[calc(100%+0.75rem)] z-50 w-48 border border-white/30 bg-ink p-2 text-white"} role="menu">
+            {isAdmin && <Link href="/admin" onClick={closeMenus} className="block px-3 py-3 text-sm transition hover:bg-gold hover:text-ink" role="menuitem">Admin</Link>}
+            <Link href="/user" onClick={closeMenus} className="block px-3 py-3 text-sm transition hover:bg-gold hover:text-ink" role="menuitem">Account</Link>
+            <button type="button" onClick={() => { closeMenus(); void signOut({ callbackUrl: "/" }); }} className="block w-full px-3 py-3 text-left text-sm transition hover:bg-gold hover:text-ink" role="menuitem">Sign out</button>
         </div>
     );
 }

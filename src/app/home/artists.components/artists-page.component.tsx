@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { ArtistYear, fetchArtistFolders } from "@/lib/fetch-artists";
+import ArrowIcon from "@/components/arrow-icon";
 
 import ArtistsSectionComponent from "./artist-section.component";
 
@@ -20,14 +21,14 @@ const CATEGORY_ORDER = [
 ];
 
 const CATEGORY_BLURBS: Record<string, string> = {
-    "Main Artists": "World-renowned talents bringing electrifying performances and unmatched expertise to the stage.",
-    "Additional International Artists": "Global sensations adding flair and diversity to the festival's vibrant lineup.",
-    "Local Artists": "Homegrown stars showcasing the heart and soul of the Filipino dance community.",
-    Performers: "Dynamic acts guaranteed to captivate and inspire every step of the way.",
-    DJs: "Masterminds behind the beats, setting the perfect tempo for unforgettable nights.",
-    Ambassadors: "Passionate advocates connecting cultures and championing the spirit of dance.",
-    Hosts: "Charismatic personalities guiding you through an unforgettable journey of rhythm and energy.",
-    "Event Organizers": "The visionary team orchestrating a seamless and spectacular celebration of dance.",
+    "Main Artists": "The artists setting the pace in workshops, shows and socials.",
+    "Additional International Artists": "More perspectives, more techniques, more ways into the music.",
+    "Local Artists": "The homegrown dancers who give Manila its unmistakable pulse.",
+    Performers: "The acts ready to stop the room and start the next conversation.",
+    DJs: "The selectors keeping your feet busy long after the last workshop.",
+    Ambassadors: "Dancers connecting the local floor to the global community.",
+    Hosts: "Your guides through the weekend, from first hello to final song.",
+    "Event Organizers": "The people building the rooms, the schedule and the experience.",
 };
 
 function editionLabel(year: string) {
@@ -76,30 +77,34 @@ export default function ArtistsPageComponent() {
     const edition = year ? editionLabel(year) : "Loading lineup";
 
     return (
-        <section id="artists" className="relative overflow-hidden bg-[#0d0a12] py-20 text-white sm:py-28">
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 sm:px-8 lg:px-12">
-                <div className="flex flex-col justify-between gap-7 border-b border-white/10 pb-10 lg:flex-row lg:items-end">
-                    <div className="max-w-2xl">
-                        <p className="eyebrow text-[#f3d78a]">The lineup</p>
-                        <h2 className="mt-3 text-4xl font-semibold tracking-[-.05em] sm:text-6xl">Meet the energy.</h2>
-                        <p className="mt-5 max-w-xl text-base leading-7 text-white/55">From global headliners to the local artists who make Manila move, this is the circle around the dance floor.</p>
+        <section id="artists" className="bg-ink py-16 text-paper sm:py-24">
+            <div className="mx-auto w-full max-w-[100rem] px-5 sm:px-8 lg:px-12">
+                <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+                    <div>
+                        <h2 className="section-title font-header uppercase">Meet the<br /><span className="text-gold">movement.</span></h2>
+                        <p className="mt-6 max-w-xl text-lg leading-8 text-paper/70">From international guests to the local artists who make Manila move. Pick an edition, then swipe through the people behind the music.</p>
                     </div>
-                    <label className="flex items-center gap-3 text-sm text-white/55">
-                        Edition
-                        <select value={year} onChange={(event) => setYear(event.target.value)} disabled={years.length === 0} className="rounded-full border border-white/15 bg-white/[.06] px-4 py-3 text-white outline-none focus:border-[#f3d78a]">
-                            {years.length === 0 ? <option value="" className="bg-[#17101f]">Loading...</option> : [...years].reverse().map((item) => <option key={item.path} value={item.name} className="bg-[#17101f]">{editionLabel(item.name)}</option>)}
+                    <label className="flex w-full flex-col gap-2 text-xs font-semibold uppercase tracking-[.12em] text-paper/80 sm:w-64">
+                        Choose an edition
+                        <select value={year} onChange={(event) => setYear(event.target.value)} disabled={years.length === 0} className="border border-white/35 bg-ink px-4 py-4 text-base font-medium normal-case tracking-normal text-paper outline-none focus:border-gold focus:bg-midnight">
+                            {years.length === 0 ? <option value="">Loading...</option> : [...years].reverse().map((item) => <option key={item.path} value={item.name}>{editionLabel(item.name)}</option>)}
                         </select>
                     </label>
                 </div>
-                <div className="rounded-[1.75rem] border border-[#f3d78a]/25 bg-[radial-gradient(circle_at_85%_10%,rgba(243,215,138,.18),transparent_25%),linear-gradient(120deg,rgba(91,35,112,.45),rgba(255,255,255,.03))] p-6 sm:p-8"><p className="eyebrow text-[#bff4df]">Manila SBKZ Overdose</p><div className="mt-3 flex flex-wrap items-end justify-between gap-4"><h3 className="text-3xl font-semibold tracking-[-.04em] sm:text-5xl">{edition}</h3><span className="text-sm text-white/45">{year || "—"} · Manila, Philippines</span></div></div>
+                <div className="mt-12 flex flex-col gap-2 border-y border-gold bg-gold px-5 py-5 text-ink sm:flex-row sm:items-end sm:justify-between">
+                    <h3 className="font-header text-3xl uppercase sm:text-4xl">{edition}</h3>
+                    <span className="text-xs font-semibold uppercase tracking-[.12em] text-ink/70">{year || "Manila SBKZ Overdose"} · Manila, Philippines</span>
+                </div>
             </div>
-            <div className="mt-10">
+            <div>
                 {categories.map((category) => {
                     const title = formatCategoryName(category.name);
-                    return <ArtistsSectionComponent key={category.path} year={year} category={category.name} title={title} blurb={CATEGORY_BLURBS[category.name] ?? "Artists shaping the energy and spirit of this year's celebration."} />;
+                    return <ArtistsSectionComponent key={category.path} year={year} category={category.name} title={title} blurb={CATEGORY_BLURBS[category.name] ?? "Artists shaping this year's dance floor."} />;
                 })}
             </div>
-            <div className="mt-12 flex justify-center"><Link href="/tickets" className="cta cta-solid px-6 py-3.5 text-sm uppercase tracking-[.14em]">Join the movement</Link></div>
+            <div className="mx-auto mt-12 flex w-full max-w-[100rem] px-5 sm:px-8 lg:px-12">
+                <Link href="/tickets" className="cta cta-solid px-6 py-4 text-sm">Dance with them <ArrowIcon /></Link>
+            </div>
         </section>
     );
 }

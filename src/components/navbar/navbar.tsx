@@ -7,10 +7,11 @@ import Navlinks from "./navlinks";
 
 export default function Navbar() {
     return (
-        <header className="fixed inset-x-0 top-0 z-40 px-4 py-4 sm:px-6 sm:py-5">
-            <div className="mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-white/10 bg-[#09070d]/70 px-3 py-2 shadow-2xl shadow-black/20 backdrop-blur-xl sm:px-4">
-                <Link href="/" className="rounded-lg p-2 transition hover:opacity-80" aria-label="Manila SBKZ Overdose home">
-                    <Image src={FIXED_LOGO_URL} alt="Manila SBKZ Overdose home" width={240} height={80} sizes="(min-width: 768px) 50px, (min-width: 640px) 84px, 64px" className="h-auto w-12 object-contain" priority />
+        <header className="fixed inset-x-0 top-0 z-40 h-20 border-b border-white/25 bg-ink px-4 text-white sm:px-6 lg:px-8">
+            <div className="mx-auto flex h-full w-full max-w-[100rem] items-center justify-between gap-4">
+                <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="Manila SBKZ Overdose home">
+                    <Image src={FIXED_LOGO_URL} alt="" width={240} height={80} sizes="48px" className="h-11 w-auto object-contain" priority />
+                    <span className="hidden font-header text-lg uppercase leading-none tracking-normal text-white min-[420px]:block sm:text-xl">MNL SBKZ<br /><span className="text-gold">Overdose</span></span>
                 </Link>
                 <Navlinks />
             </div>

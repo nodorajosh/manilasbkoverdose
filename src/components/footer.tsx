@@ -1,93 +1,53 @@
-// components/Footer.tsx (updated)
-import Image from "next/image";
 import Link from "next/link";
 
 import CloudinaryLogo from "@/components/cloudinary-logo";
+import ArrowIcon from "@/components/arrow-icon";
 
-import WA from "../assets/images/wa.svg";
-import FB from "../assets/images/fb.svg";
-import IG from "../assets/images/ig.svg";
-import LI from "../assets/images/link.svg";
+const socialLinks = [
+    { title: "WhatsApp", link: "https://wa.me/639565183562" },
+    { title: "Facebook", link: "https://www.facebook.com/profile.php?id=61551057503242" },
+    { title: "Instagram", link: "https://www.instagram.com/manilasbkzoverdose" },
+    { title: "Campsite.bio", link: "https://campsite.bio/mnlsbkz" },
+];
 
 export default function Footer() {
-    const navlinks = [
-        {
-            title: "Phone",
-            content: "+63 956 518 3562",
-            link: "https://wa.me/639565183562",
-            image: WA,
-        },
-        {
-            title: "Facebook",
-            content: "Manila SBKZ Overdose",
-            link: "https://www.facebook.com/profile.php?id=61551057503242",
-            image: FB,
-        },
-        {
-            title: "Instagram",
-            content: "Manila SBKZ Overdose",
-            link: "https://www.instagram.com/manilasbkzoverdose",
-            image: IG,
-        },
-        {
-            title: "Campsite.bio",
-            content: "campsite.bio/mnlsbkz",
-            link: "https://campsite.bio/mnlsbkz ",
-            image: LI,
-        },
-    ];
-
     return (
-        <nav className="w-full p-6 block md:flex justify-between content-center bg-black text-white font-body font-light">
-            {/* Logo */}
-            <div className="grid place-items-center">
-                <Link href="/" className="block">
-                    <CloudinaryLogo className="h-auto w-[65px] sm:w-[95px] md:w-[150px]" />
-                </Link>
-
-                {/* Terms link under logo for visibility */}
-                <div className="mt-2 text-center text-xs">
-                    <Link
-                        href="/terms"
-                        className="underline text-gray-300 hover:text-white"
-                    >
-                        Terms & Privacy
-                    </Link>
+        <footer className="bg-ink px-5 py-12 text-white sm:px-8 sm:py-16 lg:px-12">
+            <div className="mx-auto w-full max-w-[100rem]">
+                <div className="grid gap-12 border-b border-white/25 pb-12 md:grid-cols-2 lg:grid-cols-[1.2fr_.8fr_.8fr]">
+                    <div>
+                        <Link href="/" className="inline-block" aria-label="Manila SBKZ Overdose home">
+                            <CloudinaryLogo className="h-auto w-40 sm:w-52" />
+                        </Link>
+                        <p className="mt-6 max-w-sm text-lg leading-7 text-white/70">Afro-Latin dance, made in Manila. Come move with us.</p>
+                    </div>
+                    <div>
+                        <h2 className="text-xs font-semibold uppercase tracking-[.14em] text-gold">Find your way</h2>
+                        <ul className="mt-5 space-y-3 text-base">
+                            <li><Link className="footer-link" href="/#trailer">Festival film</Link></li>
+                            <li><Link className="footer-link" href="/#artists">Artist lineup</Link></li>
+                            <li><Link className="footer-link" href="/tickets">Tickets</Link></li>
+                            <li><Link className="footer-link" href="/user">Your account</Link></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h2 className="text-xs font-semibold uppercase tracking-[.14em] text-gold">Stay in step</h2>
+                        <ul className="mt-5 space-y-3 text-base">
+                            {socialLinks.map((link) => (
+                                <li key={link.title}>
+                                    <Link className="footer-link" href={link.link} target="_blank" rel="noopener noreferrer">
+                                        {link.title} <ArrowIcon />
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-3 pt-5 text-xs text-white/60 sm:flex-row sm:items-center sm:justify-between">
+                    <span>© {new Date().getFullYear()} Manila SBKZ Overdose</span>
+                    <Link href="/terms" className="footer-link w-fit">Terms & Privacy</Link>
                 </div>
             </div>
-
-            {/* Tagline + Copyright */}
-            <p className="p-6 grid md:w-3/12 place-items-center text-center">
-                Where Passion Meets Rhythm, and the World Dances as One.
-                <br />
-                <br />
-                <small>© {new Date().getFullYear()} Manila SBKZ Overdose</small>
-            </p>
-
-            {/* Social / contact icons */}
-            <ul className="flex flex-col lg:flex-row md:h-auto content-center">
-                {navlinks.map((navlink) => (
-                    <li key={navlink.title} className="px-4 grid place-items-center">
-                        <Link
-                            className="flex flex-wrap justify-center content-center"
-                            href={navlink.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            <Image
-                                className="p-4 w-[50px] md:w-[75px] h-auto"
-                                src={navlink.image}
-                                alt={navlink.title}
-                                width={75}
-                                height={75}
-                            />
-                            <div className="flex flex-wrap justify-center content-center">
-                                {navlink.content}
-                            </div>
-                        </Link>
-                    </li>
-                ))}
-            </ul>
-        </nav>
+        </footer>
     );
 }

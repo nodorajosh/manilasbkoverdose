@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { fetchBrandingAssets } from "@/lib/fetch-branding";
@@ -22,6 +21,40 @@ export default function Trailer() {
     }, []);
 
     return (
-        <section id="trailer" className="bg-[#0d0a12] px-5 py-20 text-white sm:px-8 sm:py-28 lg:px-12"><div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1.4fr_.6fr] lg:items-center"><div className="relative aspect-video overflow-hidden rounded-[1.75rem] border border-white/10 bg-black shadow-2xl shadow-black/40">{trailer?.resource_type === "video" ? <video src={trailer.url} className="h-full w-full object-cover" controls playsInline /> : trailer ? <Image src={trailer.url} alt="Manila SBKZ Overdose trailer" fill unoptimized className="object-cover" /> : <iframe src="https://www.youtube.com/embed/CbGNqqe3Zuw?si=Soe7H1ZOWUas9Ku8" width="100%" height="100%" className="absolute inset-0" allowFullScreen title="Manila SBKZ Overdose festival trailer" />}</div><div className="rounded-[1.75rem] border border-[#f3d78a]/25 bg-[radial-gradient(circle_at_80%_10%,rgba(243,215,138,.2),transparent_26%),linear-gradient(145deg,rgba(82,33,102,.5),rgba(255,255,255,.03))] p-7 sm:p-9"><p className="eyebrow text-[#f3d78a]">Feel the pulse</p><h2 className="mt-4 text-4xl font-semibold leading-[.95] tracking-[-.05em]">This is your invitation.</h2><p className="mt-5 text-sm leading-7 text-white/60">Bright lights, powerful beats, and dancers moving as one. Press play, then step into the story.</p><Link href="/tickets" className="cta cta-solid mt-7 inline-flex px-5 py-3 text-sm uppercase tracking-[.12em]">Join the celebration</Link></div></div></section>
+        <section id="trailer" className="bg-ink px-5 py-16 text-white sm:px-8 sm:py-24 lg:px-12">
+            <div className="mx-auto w-full max-w-[100rem]">
+                <div className="mb-8 flex flex-col justify-between gap-5 sm:mb-10 md:flex-row md:items-end">
+                    <h2 className="font-header text-5xl uppercase leading-[.9] text-white sm:text-7xl lg:text-8xl">
+                        Press play.<br /><span className="text-gold">Feel the room.</span>
+                    </h2>
+                    <p className="max-w-sm text-base leading-7 text-white/70 md:pb-2 md:text-right">
+                        Real floors. Real dancers. See what happens when Manila steps onto the floor.
+                    </p>
+                </div>
+
+                <div className="relative aspect-video w-full overflow-hidden border border-white/30 bg-black">
+                    {trailer?.resource_type === "video" ? (
+                        <video src={trailer.url} poster="https://res.cloudinary.com/dmioegrww/image/upload/v1792294239/741705230_122291761946035250_3199701299302573038_n_mmnku3.jpg" className="h-full w-full object-cover" controls playsInline preload="metadata" />
+                    ) : trailer ? (
+                        <Image src={trailer.url} alt="Manila SBKZ Overdose festival film" fill unoptimized className="object-cover" />
+                    ) : (
+                        <iframe
+                            src="https://www.youtube.com/embed/CbGNqqe3Zuw?si=Soe7H1ZOWUas9Ku8"
+                            width="100%"
+                            height="100%"
+                            className="absolute inset-0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            loading="lazy"
+                            title="Manila SBKZ Overdose festival film"
+                        />
+                    )}
+                </div>
+                <div className="flex flex-col gap-2 border-b border-white/30 py-4 text-xs font-semibold uppercase tracking-[.12em] text-white/70 sm:flex-row sm:items-center sm:justify-between">
+                    <span>Manila SBKZ Overdose</span>
+                    <span>Turn it up. Watch it full screen.</span>
+                </div>
+            </div>
+        </section>
     );
 }

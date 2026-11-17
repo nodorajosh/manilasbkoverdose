@@ -4,35 +4,81 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import CloudinaryLogo from "@/components/cloudinary-logo";
-const FALLBACK_HERO = "https://res.cloudinary.com/dmioegrww/image/upload/v1792294239/741705230_122291761946035250_3199701299302573038_n_mmnku3.jpg";
 import { fetchBrandingAssets } from "@/lib/fetch-branding";
-import type { BrandingAsset } from "@/lib/branding-assets";
+import type { BrandingAssets } from "@/lib/branding-assets";
+import ArrowIcon from "@/components/arrow-icon";
+
+const FALLBACK_HERO = "https://res.cloudinary.com/dmioegrww/image/upload/v1792294239/741705230_122291761946035250_3199701299302573038_n_mmnku3.jpg";
 
 export default function Hero() {
-    const [hero, setHero] = useState<BrandingAsset | null>(null);
+    const [assets, setAssets] = useState<BrandingAssets | null>(null);
+    const [motionAllowed, setMotionAllowed] = useState(false);
 
     useEffect(() => {
         let active = true;
-        fetchBrandingAssets().then((assets) => {
-            if (active) setHero(assets?.hero ?? null);
+        fetchBrandingAssets().then((nextAssets) => {
+            if (active) setAssets(nextAssets);
         }).catch(() => undefined);
+
+        const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const updateMotionPreference = () => setMotionAllowed(!motionQuery.matches);
+        updateMotionPreference();
+        motionQuery.addEventListener("change", updateMotionPreference);
 
         return () => {
             active = false;
+            motionQuery.removeEventListener("change", updateMotionPreference);
         };
     }, []);
 
+    const heroImage = assets?.hero?.resource_type === "image" ? assets.hero.url : FALLBACK_HERO;
+    const heroVideo = motionAllowed && assets?.trailer?.resource_type === "video" ? assets.trailer : null;
+
     return (
-        <section id="hero" className="relative isolate min-h-dvh overflow-hidden bg-[#09070d] text-white">
-            <div className="absolute inset-0">
-                {hero?.resource_type === "video" ? <video className="h-full w-full object-cover opacity-65" autoPlay muted loop playsInline><source src={hero.url} /></video> : <Image src={hero?.url ?? FALLBACK_HERO} alt={hero ? "Manila SBKZ Overdose hero" : "Filipino couple dancing salsa in a Manila nightclub"} fill priority sizes="100vw" unoptimized={Boolean(hero)} className="object-cover object-center opacity-65" />}
+        <section id="hero" className="hero-scene relative isolate min-h-svh overflow-hidden bg-ink text-white">
+            <div className="hero-media absolute inset-0" aria-hidden="true">
+                {heroVideo ? (
+                    <video className="h-full w-full object-cover" poster={heroImage} autoPlay muted loop playsInline preload="auto" tabIndex={-1}>
+                        <source src={heroVideo.url.replace("/upload/", "/upload/so_17,eo_37,q_auto:eco,w_1280,br_1000k/")} />
+                    </video>
+                ) : (
+                    <Image src={heroImage} alt="" fill priority sizes="100vw" unoptimized={Boolean(assets?.hero)} className="object-cover object-center" />
+                )}
             </div>
-            <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(8,5,12,.98)_8%,rgba(27,10,35,.7)_52%,rgba(8,5,12,.3)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(243,215,138,.2),transparent_28%)]" />
-            <div className="relative mx-auto flex min-h-dvh w-full max-w-7xl flex-col justify-end px-5 pb-12 pt-32 sm:px-8 sm:pb-16 lg:px-12">
-                <div className="max-w-4xl"><CloudinaryLogo className="h-auto w-32 sm:w-44" /><p className="eyebrow mt-9 text-[#f3d78a]">Afro - Latin Dance Festival</p><h1 className="mt-4 max-w-4xl text-6xl leading-[.9] tracking-[-.06em] sm:text-8xl lg:text-9xl">Where the city moves as one.</h1><p className="mt-7 max-w-xl text-base leading-7 text-white/70 sm:text-lg">Three days of workshops, world-class artists, and late-night connection in the heart of Manila.</p><div className="mt-9 flex flex-wrap gap-3"><Link href="/tickets" className="cta cta-solid px-6 py-3.5 text-sm uppercase tracking-[.14em]">Get your pass</Link><a href="#artists" className="cta cta-outline px-6 py-3.5 text-sm uppercase tracking-[.14em]">Meet the lineup</a></div></div>
-                <div className="mt-14 flex flex-wrap gap-8 border-t border-white/15 pt-5 text-xs uppercase tracking-[.18em] text-white/50"><span>Manila, Philippines</span><span>Dance · music · culture</span></div>
+            <div className="hero-shade absolute inset-0" />
+
+            <div className="relative mx-auto flex min-h-svh w-full max-w-[100rem] flex-col px-5 pb-0 pt-28 sm:px-8 sm:pt-32 lg:px-12">
+                <div className="flex items-start justify-between gap-6 border-t border-white/40 pt-3 text-xs font-semibold uppercase tracking-[.12em] text-white sm:text-sm">
+                    <span>June 4–6, 2027</span>
+                    <span className="text-right">Manila, Philippines</span>
+                </div>
+
+                <div className="flex flex-1 flex-col justify-center py-10 sm:py-12">
+                    <h1 className="hero-title font-header uppercase text-paper">
+                        <span>Dance</span>{" "}
+                        <span className="hero-title-offset text-gold">All out.</span>
+                    </h1>
+                    <div className="mt-8 flex flex-col gap-7 sm:mt-10 lg:flex-row lg:items-end lg:justify-between">
+                        <p className="max-w-lg text-lg leading-8 text-white sm:text-xl">
+                            Three days to learn, watch and dance in the heart of Manila.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-7 gap-y-4">
+                            <Link href="/tickets" className="cta cta-solid px-6 py-4 text-sm">
+                                Get your pass <ArrowIcon />
+                            </Link>
+                            <a href="#trailer" className="text-link inline-flex items-center gap-2 text-sm text-white">
+                                Watch the film <ArrowIcon direction="down" />
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 border-t border-white/40 text-xs font-semibold uppercase tracking-[.12em] text-white sm:grid-cols-4 sm:text-sm">
+                    <span className="border-r border-white/40 py-4 pr-3">Salsa</span>
+                    <span className="py-4 pl-4 sm:border-r sm:border-white/40 sm:pl-5">Bachata</span>
+                    <span className="border-r border-t border-white/40 py-4 pr-3 sm:border-t-0">Kizomba</span>
+                    <span className="border-t border-white/40 py-4 pl-4 sm:border-t-0 sm:pl-5">Zouk</span>
+                </div>
             </div>
         </section>
     );

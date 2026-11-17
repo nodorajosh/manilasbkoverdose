@@ -1,67 +1,51 @@
 import type { Metadata, Viewport } from "next";
-import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import localFont from "next/font/local";
 
-import { Cormorant_Garamond, Montserrat } from 'next/font/google'
 import "./globals.css";
 
 import Navbar from "@/components/navbar/navbar";
 import Footer from "@/components/footer";
 import { Providers } from "@/components/providers";
 
-// const brexon = localFont({
-//   src: "../assets/fonts/brexon.regular.ttf",
-//   variable: "--font-header"
-// })
-
-const montserrat = Montserrat({
-  variable: "--font-body",
-  subsets: ['latin']
-})
-const cormorantGaramond = Cormorant_Garamond({
-  variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"]
-})
+const clashDisplay = localFont({
+  src: "../assets/fonts/ClashDisplay-Variable.ttf",
+  variable: "--font-clash",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "Manila SBKZ Overdose | The Ultimate Afro-Latin Dance Festival",
-  description:
-    "Experience the most electrifying Afro-Latin dance festival in Manila! Join world-class instructors, social dance nights, and unforgettable performances at Manila SBKZ Overdose.",
+  title: "Manila SBKZ Overdose | Salsa, Bachata, Kizomba & Zouk",
+  description: "Train by day and dance into the night at Manila SBKZ Overdose. Explore the artist lineup and choose your festival pass.",
   keywords: [
     "Manila SBKZ Overdose",
     "Afro-Latin dance festival Manila",
-    "Salsa Bachata Kizomba event",
-    "dance bootcamp",
+    "Salsa Bachata Kizomba Zouk event",
+    "dance workshops Manila",
     "social dancing Manila",
-    "Dance festival 2025",
     "international dance festival",
   ],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://manila.sbkzoverdose.com/",
-    title: "Manila SBKZ Overdose | The Ultimate Afro-Latin Dance Festival",
-    description:
-      "Join the ultimate Afro-Latin dance festival in Manila with top international artists, workshops, and social dance nights.",
+    title: "Manila SBKZ Overdose | Manila Moves Different",
+    description: "Salsa, Bachata, Kizomba and Zouk. Meet the artists and choose your festival pass.",
     images: [
       {
         url: "https://manila.sbkzoverdose.com/banner.jpg",
         width: 1200,
         height: 630,
-        alt: "Manila SBKZ Overdose - Afro-Latin Dance Festival",
+        alt: "Manila SBKZ Overdose Afro-Latin dance festival",
       },
     ],
   },
 };
 
 export const viewport: Viewport = {
-  // height: "device-height", 
-  // width: "device-width", 
-  // initialScale: 1, 
   minimumScale: 1,
-  // targetDensity: "device-dpi"
-}
+};
 
 export default function RootLayout({
   children,
@@ -70,7 +54,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${cormorantGaramond.variable} ${montserrat.className}`}>
+      <body className={clashDisplay.variable}>
         <Providers>
           <Navbar />
           {children}

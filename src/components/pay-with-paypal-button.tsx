@@ -116,7 +116,7 @@ export default function PayWithPayPalButton({
         <button
             onClick={handleClick}
             disabled={disabled}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-full cta cta-solid ${className} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+            className={`cta cta-solid flex items-center justify-center gap-2 px-4 py-3 ${className} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
             aria-disabled={disabled}
             type="button"
         >
